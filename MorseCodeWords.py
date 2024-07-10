@@ -3,8 +3,10 @@ from tkinter import ttk, filedialog
 from tkinter import messagebox
 from tkmacosx import Button
 import threading
+from datetime import datetime, timedelta
 import shelve
 from MorseSound import MorseSound
+from SessionDB import Session, SessionDB
 
 class MorseTrainerUI:
     def __init__(self, root, morse_sound, compare_function):
@@ -15,6 +17,7 @@ class MorseTrainerUI:
         self.root.geometry("800x480")  # 5:3 aspect ratio
         self.score = tk.IntVar(value=0)
         self.load_settings()
+        self.session_db = SessionDB()
         self.create_start_screen()
 
     def load_settings(self):
@@ -211,6 +214,7 @@ class MorseTrainerUI:
         self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()))
         self.play_volume_test()
         self.get_next_word(3)
+        self.current_session = Session(date=datetime.now().isoformat())
 
     def update_softness(self, event):
         self.softness = self.softness_slider.get()
@@ -235,22 +239,130 @@ class MorseTrainerUI:
             self.test_volume_button = Button(sound_frame, text="Test Volume", command=self.play_volume_test)
             self.test_volume_button.grid(row=2, column=0, columnspan=2, pady=5)
 
+    def create_session_results_screen(self):
+        if self.current_session is None:
+            messagebox.showerror("Error", "No current session available")
+            return
+
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        self.session_db.add_session(self.current_session)
+        self.create_session_detail_frame()
+
+        self.back_button = Button(self.root, text="Done", command=self.create_results_screen)
+        self.back_button.pack(side=tk.BOTTOM, fill=tk.X)
+        self.back_button.bind("<Return>", lambda event: self.create_results_screen())
+        self.back_button.focus_set()
+
+    def create_session_detail_frame(self, side=tk.TOP, fill=tk.BOTH, expand=True):
+        self.session_frame = ttk.Frame(self.root)
+        self.session_frame.pack(side=side, fill=fill, expand=expand)
+
+        self.session_label = ttk.Label(self.session_frame, text=f"Session Date: {self.current_session.date}")
+        self.session_label.pack()
+
+        self.pair_tree = ttk.Treeview(self.session_frame, columns=('received', 'sent', 'duration'), show='headings')
+        self.pair_tree.heading('received', text='Received')
+        self.pair_tree.heading('sent', text='Sent')
+        self.pair_tree.heading('duration', text='Duration')
+        self.pair_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        scrollbar = ttk.Scrollbar(self.session_frame, orient=tk.VERTICAL, command=self.pair_tree.yview)
+        self.pair_tree.configure(yscroll=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        for received, sent, duration in self.current_session.received_sent_pairs:
+            self.pair_tree.insert('', tk.END, values=(received, sent, float(duration)))
 
     def create_results_screen(self):
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        results_frame = ttk.Frame(self.root)
-        results_frame.pack(fill="both", expand=True)
+        self.session_frame = ttk.Frame(self.root)
+        self.session_frame.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(results_frame, text=f"Final Score: {self.score.get()}").pack(padx=5, pady=5)
+        self.tree = ttk.Treeview(self.session_frame, columns=('score', 'date'), show='headings')
+        self.tree.heading('score', text='Score')
+        self.tree.heading('date', text='Date')
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.restart_button = Button(results_frame, text="Restart", command=self.create_start_screen)
-        self.restart_button.pack(padx=5, pady=5)
+        scrollbar = ttk.Scrollbar(self.session_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscroll=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.tree.bind('<Button-1>', self.on_click)
+        self.tree.bind('<Button-2>', self.show_context_menu)
+        self.populate_tree()
+
+        self.create_details_frame(fill=tk.BOTH)
+
+        self.bottom_button_frame = ttk.Frame(self.root)
+        self.bottom_button_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.restart_button = Button(self.bottom_button_frame, text="Restart", command=self.create_start_screen)
         self.restart_button.bind("<Return>", lambda event: self.create_start_screen())
         self.restart_button.focus_set()
-        self.quit_button = Button(results_frame, text="Exit", command=self.quit_app)
-        self.quit_button.pack(padx=5, pady=5)
+        self.restart_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self.quit_button = Button(self.bottom_button_frame, text="Quit", command=self.quit_app)
+        self.quit_button.pack(side=tk.RIGHT, fill=tk.X, expand=True)
+
+        self.create_context_menu()
+
+    def create_details_frame(self, fill):
+        self.detail_frame = ttk.Frame(self.root)
+        self.detail_frame.pack(fill=tk.X)
+
+        self.session_label = ttk.Label(self.detail_frame, text="")
+        self.session_label.pack()
+
+        self.pair_tree = ttk.Treeview(self.detail_frame, columns=('received', 'sent', 'duration'), show='headings')
+        self.pair_tree.heading('received', text='Received')
+        self.pair_tree.heading('sent', text='Sent')
+        self.pair_tree.heading('duration', text='Duration')
+        self.pair_tree.pack(fill=fill, expand=True)
+
+    def create_context_menu(self):
+        self.context_menu = tk.Menu(self.root, tearoff=0)
+        self.context_menu.add_command(label="Delete", command=self.confirm_delete)
+
+    def show_context_menu(self, event):
+        selected_item = self.tree.selection()
+        if selected_item:
+            self.context_menu.post(event.x_root, event.y_root)
+
+    def confirm_delete(self):
+        selected_item = self.tree.selection()
+        if selected_item:
+            session_date = self.tree.item(selected_item, 'values')[1]
+            confirm = messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete session {session_date}?")
+            if confirm:
+                self.delete_session(session_date)
+
+    def delete_session(self, session_date):
+        self.session_db.delete_session(session_date)
+        self.populate_tree()
+
+    def populate_tree(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        sessions = self.session_db.get_sorted_sessions(sort_by='score', ascending=False)
+        for session in sessions:
+            self.tree.insert('', tk.END, values=(session.score, session.date))
+
+    def on_click(self, event):
+        item = self.tree.selection()[0]
+        session_date = self.tree.item(item, 'values')[1]
+        self.selected_session = self.session_db.get_session(session_date)
+        self.display_session()
+
+    def display_session(self):
+        if self.selected_session:
+            self.session_label.config(text=f"Session Date: {self.selected_session.date}")
+            for item in self.pair_tree.get_children():
+                self.pair_tree.delete(item)
+            for received, sent, duration in self.selected_session.received_sent_pairs:
+                self.pair_tree.insert('', tk.END, values=(received, sent, float(duration)))
 
     def update_volume(self, event):
         self.volume = self.volume_slider.get()
@@ -283,7 +395,8 @@ class MorseTrainerUI:
             self.current_speed = max(self.current_speed - 1, self.init_speed.get())
         self.received_text.config(text=received_text, fg=c)
         self.sent_text.config(text=sent_text)
-        morse_sound.set_speed(float(self.current_speed))
+        self.current_session.add_pair(received=received_text, sent=sent_text, duration=1.3)
+        #morse_sound.set_speed(float(self.current_speed))
 
         self.update_data_frame()
         self.get_next_word(delay)
@@ -297,7 +410,8 @@ class MorseTrainerUI:
         if replay == False:
             self.sent_word = self.data_source.get_next_word()
             if not self.sent_word:
-                self.create_results_screen()
+                #self.create_results_screen()
+                self.create_session_results_screen()
                 return
         threading.Timer(delay, self.morse_sound.play_string, args=[self.sent_word]).start()
 
