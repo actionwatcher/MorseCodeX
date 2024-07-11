@@ -15,7 +15,6 @@ class MorseTrainerUI:
         self.compare_function = compare_function
         self.root.title("CW Training Machine")
         self.root.geometry("800x480")  # 5:3 aspect ratio
-        self.score = tk.IntVar(value=0)
         self.load_settings()
         self.session_db = SessionDB()
         self.create_start_screen()
@@ -114,46 +113,6 @@ class MorseTrainerUI:
             self.test_volume_button.grid(row=2, column=0, columnspan=2, pady=5)
 
 
-    def create_start_screen___(self):
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-        start_frame = ttk.Frame(self.root)
-        start_frame.pack(fill="both", expand=True)
-        selection_frame = ttk.Frame(start_frame)
-        selection_frame.grid(row=0, column=0)
-
-
-        ttk.Label(selection_frame, text="Initial Speed (WPM):").grid(row=0, column=0, padx=5, pady=5)
-        self.init_speed_entry = ttk.Entry(selection_frame, textvariable=self.init_speed)
-        self.init_speed_entry.grid(row=0, column=1, padx=5, pady=5)
-
-        ttk.Label(selection_frame, text="Max Speed (WPM):").grid(row=1, column=0, padx=5, pady=5)
-        self.max_speed_entry = ttk.Entry(selection_frame, textvariable=self.max_speed)
-        self.max_speed_entry.grid(row=1, column=1, padx=5, pady=5)
-
-        self.create_volume_frame(start_frame, test_button = True)
-
-        ttk.Label(selection_frame, text="Select File:").grid(row=4, column=0, padx=5, pady=5)
-        self.file_path_var = tk.StringVar(value='MASTER.SCP')
-        self.file_path_entry = ttk.Entry(selection_frame, textvariable=self.file_path_var, width=40)
-        self.file_path_entry.grid(row=4, column=1, padx=5, pady=5)
-        self.file_select_button = Button(selection_frame, text="Browse", command=self.select_file)
-        self.file_select_button.grid(row=4, column=2, padx=5, pady=5)
-
-        self.start_button = Button(selection_frame, text="Start", command=self.start_training)
-        self.start_button.grid(row=5, column=0, padx=5, pady=5)
-
-        # Bind the Enter key to the start button's command
-        self.start_button.bind("<Return>", lambda event: self.start_training())
-
-        self.quit_button = Button(selection_frame, text="Quit", command=self.quit_app)
-        self.quit_button.grid(row=5, column=1, padx=5, pady=5)
-
-        # Optionally, focus the start button
-        self.max_word_cnt = 2
-        self.start_button.focus_set()
-
     def select_file(self):
         file_path = filedialog.askopenfilename(
             title="Select a file",
@@ -176,7 +135,8 @@ class MorseTrainerUI:
         self.speed_label = ttk.Label(data_frame, text=f"Speed: {self.current_speed} WPM")
         self.speed_label.grid(row=0, column=0, padx=5, pady=5)
         
-        self.score_label = ttk.Label(data_frame, text=f"Score: {self.score.get()}")
+        self.current_session = Session(date=datetime.now().isoformat())
+        self.score_label = ttk.Label(data_frame, text=f"Score: {self.current_session.score}")
         self.score_label.grid(row=0, column=1, padx=5, pady=5)
 
         self.count_label = ttk.Label(data_frame, text=f"Count: {self.received_cnt}")
@@ -214,7 +174,7 @@ class MorseTrainerUI:
         self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()))
         self.play_volume_test()
         self.get_next_word(3)
-        self.current_session = Session(date=datetime.now().isoformat())
+  
 
     def update_softness(self, event):
         self.softness = self.softness_slider.get()
@@ -290,8 +250,8 @@ class MorseTrainerUI:
         self.tree.configure(yscroll=scrollbar.set)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.tree.bind('<Button-1>', self.on_click)
-        self.tree.bind('<Button-2>', self.show_context_menu)
+        self.tree.bind('<ButtonRelease-1>', self.on_click)
+        self.tree.bind('<ButtonRelease-2>', self.show_context_menu)
         self.populate_tree()
 
         self.create_details_frame(fill=tk.BOTH)
@@ -351,7 +311,7 @@ class MorseTrainerUI:
             self.tree.insert('', tk.END, values=(session.score, session.date))
 
     def on_click(self, event):
-        item = self.tree.selection()[0]
+        item = self.tree.focus()
         session_date = self.tree.item(item, 'values')[1]
         self.selected_session = self.session_db.get_session(session_date)
         self.display_session()
@@ -384,7 +344,8 @@ class MorseTrainerUI:
         sent_text = self.sent_word.upper()
         score, correctness_mask = self.compare_function(sent_text, received_text)
 
-        self.score.set(self.score.get() + score)
+        self.current_session.add_pair(received=received_text, sent=sent_text, duration=1.3)
+        self.current_session.set_score(self.current_session.get_score() + score)
         self.received_cnt += 1
         
         if score == len(sent_text):
@@ -395,15 +356,13 @@ class MorseTrainerUI:
             self.current_speed = max(self.current_speed - 1, self.init_speed.get())
         self.received_text.config(text=received_text, fg=c)
         self.sent_text.config(text=sent_text)
-        self.current_session.add_pair(received=received_text, sent=sent_text, duration=1.3)
-        #morse_sound.set_speed(float(self.current_speed))
-
+        morse_sound.set_speed(float(self.current_speed))
         self.update_data_frame()
         self.get_next_word(delay)
     
     def update_data_frame(self):
         self.speed_label.config(text=f"Speed: {self.current_speed} WPM")
-        self.score_label.config(text=f"Score: {self.score.get()}")
+        self.score_label.config(text=f"Score: {self.current_session.score}")
         self.count_label.config(text=f"Count: {self.received_cnt}")
 
     def get_next_word(self, delay, replay=False):
