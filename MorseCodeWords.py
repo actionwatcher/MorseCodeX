@@ -215,10 +215,13 @@ class MorseTrainerUI:
         self.back_button.focus_set()
 
     def create_session_detail_frame(self, side=tk.TOP, fill=tk.BOTH, expand=True):
+        s = ttk.Style()
+        s.configure('Treeview.Heading', foreground="black", background="green3")
+
         self.session_frame = ttk.Frame(self.root)
         self.session_frame.pack(side=side, fill=fill, expand=expand)
 
-        self.session_label = ttk.Label(self.session_frame, text=f"Session Date: {self.current_session.date}")
+        self.session_label = ttk.Label(self.session_frame, text=f"Session score: {self.current_session.score}  Session Date: {self.current_session.date}")
         self.session_label.pack()
 
         self.pair_tree = ttk.Treeview(self.session_frame, columns=('received', 'sent', 'duration'), show='headings')
@@ -318,7 +321,7 @@ class MorseTrainerUI:
 
     def display_session(self):
         if self.selected_session:
-            self.session_label.config(text=f"Session Date: {self.selected_session.date}")
+            self.session_label.config(text=f"Session score: {self.selected_session.score}    Session Date: {self.selected_session.date}")
             for item in self.pair_tree.get_children():
                 self.pair_tree.delete(item)
             for received, sent, duration in self.selected_session.received_sent_pairs:
