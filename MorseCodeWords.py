@@ -320,12 +320,18 @@ class MorseTrainerUI:
         self.display_session()
 
     def display_session(self):
+        self.pair_tree.tag_configure('incorrect', foreground="red")
+        self.pair_tree.tag_configure('correct', foreground="green")
         if self.selected_session:
             self.session_label.config(text=f"Session score: {self.selected_session.score}    Session Date: {self.selected_session.date}")
             for item in self.pair_tree.get_children():
                 self.pair_tree.delete(item)
             for received, sent, duration in self.selected_session.received_sent_pairs:
-                self.pair_tree.insert('', tk.END, values=(received, sent, float(duration)))
+                s, m = compare(sent, received)
+                t = 'correct'
+                if s != len(sent):
+                    t = 'in' + t
+                self.pair_tree.insert('', tk.END, values=(received, sent, float(duration)), tags=t)
 
     def update_volume(self, event):
         self.volume = self.volume_slider.get()
