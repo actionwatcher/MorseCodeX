@@ -14,7 +14,9 @@ class MorseTrainerUI:
         self.morse_sound = morse_sound
         self.compare_function = compare_function
         self.root.title("CW Training Machine")
-        self.root.geometry("800x480")  # 5:3 aspect ratio
+        self.ui_width = 800
+        self.ui_height = int(self.ui_width*0.7)
+        self.root.geometry(f"{self.ui_width}x{self.ui_height}")  # 5:3 aspect ratio
         self.load_settings()
         self.session_db = SessionDB()
         self.create_start_screen()
@@ -224,18 +226,21 @@ class MorseTrainerUI:
         self.session_label = ttk.Label(self.session_frame, text=f"Session score: {self.current_session.score}  Session Date: {self.current_session.date}")
         self.session_label.pack()
 
-        self.pair_tree = ttk.Treeview(self.session_frame, columns=('received', 'sent', 'duration'), show='headings')
+        self.pair_tree = ttk.Treeview(self.session_frame, columns=('received', 'sent', 'speed', 'duration'), show='headings')
         self.pair_tree.heading('received', text='Received')
         self.pair_tree.heading('sent', text='Sent')
+        self.pair_tree.heading('speed', text='Speed')
         self.pair_tree.heading('duration', text='Duration')
+        w = max(20, int(self.ui_width*0.1))
+        self.pair_tree.column('speed', width=w)
+        self.pair_tree.column('duration', width=w)
         self.pair_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         scrollbar = ttk.Scrollbar(self.session_frame, orient=tk.VERTICAL, command=self.pair_tree.yview)
         self.pair_tree.configure(yscroll=scrollbar.set)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        for received, sent, duration in self.current_session.received_sent_pairs:
-            self.pair_tree.insert('', tk.END, values=(received, sent, float(duration)))
+        self.selected_session = self.current_session
+        self.display_session()
 
     def create_results_screen(self):
         for widget in self.root.winfo_children():
@@ -257,7 +262,7 @@ class MorseTrainerUI:
         self.tree.bind('<ButtonRelease-2>', self.show_context_menu)
         self.populate_tree()
 
-        self.create_details_frame(fill=tk.BOTH)
+        self.create_details_frame()
 
         self.bottom_button_frame = ttk.Frame(self.root)
         self.bottom_button_frame.pack(side=tk.BOTTOM, fill=tk.X)
@@ -272,18 +277,26 @@ class MorseTrainerUI:
 
         self.create_context_menu()
 
-    def create_details_frame(self, fill):
+    def create_details_frame(self):
         self.detail_frame = ttk.Frame(self.root)
-        self.detail_frame.pack(fill=tk.X)
+        self.detail_frame.pack(fill=tk.BOTH, expand=True)
 
         self.session_label = ttk.Label(self.detail_frame, text="")
         self.session_label.pack()
 
-        self.pair_tree = ttk.Treeview(self.detail_frame, columns=('received', 'sent', 'duration'), show='headings')
+        self.pair_tree = ttk.Treeview(self.detail_frame, columns=('received', 'sent', 'speed', 'duration'), show='headings')
         self.pair_tree.heading('received', text='Received')
         self.pair_tree.heading('sent', text='Sent')
+        self.pair_tree.heading('speed', text='Speed')
         self.pair_tree.heading('duration', text='Duration')
-        self.pair_tree.pack(fill=fill, expand=True)
+        w = max(20, int(self.ui_width*0.1))
+        self.pair_tree.column('speed', width=w)
+        self.pair_tree.column('duration', width=w)
+        self.pair_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar = ttk.Scrollbar(self.detail_frame, orient=tk.VERTICAL, command=self.pair_tree.yview)
+        self.pair_tree.configure(yscroll=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
 
     def create_context_menu(self):
         self.context_menu = tk.Menu(self.root, tearoff=0)
@@ -326,12 +339,12 @@ class MorseTrainerUI:
             self.session_label.config(text=f"Session score: {self.selected_session.score}    Session Date: {self.selected_session.date}")
             for item in self.pair_tree.get_children():
                 self.pair_tree.delete(item)
-            for received, sent, duration in self.selected_session.received_sent_pairs:
+            for received, sent, speed, duration in self.selected_session.items:
                 s, m = compare(sent, received)
                 t = 'correct'
                 if s != len(sent):
                     t = 'in' + t
-                self.pair_tree.insert('', tk.END, values=(received, sent, float(duration)), tags=t)
+                self.pair_tree.insert('', tk.END, values=(received, sent, speed, float(duration)), tags=t)
 
     def update_volume(self, event):
         self.volume = self.volume_slider.get()
@@ -353,7 +366,7 @@ class MorseTrainerUI:
         sent_text = self.sent_word.upper()
         score, correctness_mask = self.compare_function(sent_text, received_text)
 
-        self.current_session.add_pair(received=received_text, sent=sent_text, duration=1.3)
+        self.current_session.add_item(received=received_text, sent=sent_text, speed=self.current_speed, duration=1.3)
         self.current_session.set_score(self.current_session.get_score() + score)
         self.received_cnt += 1
         

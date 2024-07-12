@@ -2,13 +2,13 @@ import sqlite3
 from datetime import datetime, timedelta
 
 class Session:
-    def __init__(self, date, received_sent_pairs=None, score=0):
+    def __init__(self, date, items=None, score=0):
         self.date = date
-        self.received_sent_pairs = received_sent_pairs if received_sent_pairs is not None else []
+        self.items = items if items is not None else []
         self._score = score
 
-    def add_pair(self, received, sent, duration):
-        self.received_sent_pairs.append((received, sent, duration))
+    def add_item(self, received, sent, speed, duration):
+        self.items.append((received, sent, speed, duration))
 
     def get_score(self):
         return self._score
@@ -19,7 +19,7 @@ class Session:
     score = property(get_score, set_score)
 
     def __repr__(self):
-        return f"Session(date={self.date}, score={self.score}, pairs={self.received_sent_pairs})"
+        return f"Session(date={self.date}, score={self.score}, items={self.items})"
 
 
 class SessionDB:
@@ -36,11 +36,12 @@ class SessionDB:
                 )
             ''')
             self.conn.execute('''
-                CREATE TABLE IF NOT EXISTS pairs (
+                CREATE TABLE IF NOT EXISTS items (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     date TEXT,
                     received TEXT,
                     sent TEXT,
+                    speed INTEGER,
                     duration REAL,
                     FOREIGN KEY(date) REFERENCES sessions(date)
                 )
@@ -52,18 +53,18 @@ class SessionDB:
                 INSERT INTO sessions (date, score)
                 VALUES (?, ?)
             ''', (session.date, session.score))
-            for received, sent, duration in session.received_sent_pairs:
+            for received, sent, speed, duration in session.items:
                 self.conn.execute('''
-                    INSERT INTO pairs (date, received, sent, duration)
-                    VALUES (?, ?, ?, ?)
-                ''', (session.date, received, sent, duration))
+                    INSERT INTO items (date, received, sent, speed, duration)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (session.date, received, sent, speed, duration))
 
     def delete_session(self, date):
         with self.conn:
-            self.conn.execute('DELETE FROM pairs WHERE date = ?', (date,))
+            self.conn.execute('DELETE FROM items WHERE date = ?', (date,))
             self.conn.execute('DELETE FROM sessions WHERE date = ?', (date,))
 
-    def get_sorted_sessions(self, sort_by='date', ascending=True):
+    def get_sorted_sessions(self, sort_by='score', ascending=False):
         order = 'ASC' if ascending else 'DESC'
         with self.conn:
             cursor = self.conn.execute(f'''
@@ -80,18 +81,12 @@ class SessionDB:
             session_data = cursor.fetchone()
             if session_data:
                 cursor = self.conn.execute('''
-                    SELECT received, sent, duration FROM pairs WHERE date = ?
+                    SELECT received, sent, speed, duration FROM items WHERE date = ?
                 ''', (date,))
-                pairs = [(received, sent, duration) for received, sent, duration in cursor.fetchall()]
-                session = Session(date=session_data[0], received_sent_pairs=pairs, score=session_data[1])
+                items = [(received, sent, speed, duration) for received, sent, speed, duration in cursor.fetchall()]
+                session = Session(date=session_data[0], items=items, score=session_data[1])
                 return session
             return None
-
-    def list_sessions(self):
-        with self.conn:
-            cursor = self.conn.execute('SELECT * FROM sessions')
-            sessions = cursor.fetchall()
-        return [self.get_session(session[0]) for session in sessions]
 
 
 if __name__ == "__main__":# Example Usage
