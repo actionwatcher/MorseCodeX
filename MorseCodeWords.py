@@ -209,38 +209,14 @@ class MorseTrainerUI:
         for widget in self.root.winfo_children():
             widget.destroy()
         self.session_db.add_session(self.current_session)
-        self.create_session_detail_frame()
+        self.create_details_frame()
+        self.selected_session = self.current_session
+        self.display_session()
 
         self.back_button = Button(self.root, text="Done", command=self.create_results_screen)
         self.back_button.pack(side=tk.BOTTOM, fill=tk.X)
         self.back_button.bind("<Return>", lambda event: self.create_results_screen())
         self.back_button.focus_set()
-
-    def create_session_detail_frame(self, side=tk.TOP, fill=tk.BOTH, expand=True):
-        s = ttk.Style()
-        s.configure('Treeview.Heading', foreground="black", background="green3")
-
-        self.session_frame = ttk.Frame(self.root)
-        self.session_frame.pack(side=side, fill=fill, expand=expand)
-
-        self.session_label = ttk.Label(self.session_frame, text=f"Session score: {self.current_session.score}  Session Date: {self.current_session.date}")
-        self.session_label.pack()
-
-        self.pair_tree = ttk.Treeview(self.session_frame, columns=('received', 'sent', 'speed', 'duration'), show='headings')
-        self.pair_tree.heading('received', text='Received')
-        self.pair_tree.heading('sent', text='Sent')
-        self.pair_tree.heading('speed', text='Speed')
-        self.pair_tree.heading('duration', text='Duration')
-        w = max(20, int(self.ui_width*0.1))
-        self.pair_tree.column('speed', width=w)
-        self.pair_tree.column('duration', width=w)
-        self.pair_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        scrollbar = ttk.Scrollbar(self.session_frame, orient=tk.VERTICAL, command=self.pair_tree.yview)
-        self.pair_tree.configure(yscroll=scrollbar.set)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.selected_session = self.current_session
-        self.display_session()
 
     def create_results_screen(self):
         for widget in self.root.winfo_children():
