@@ -254,6 +254,8 @@ class MorseTrainerUI:
         self.create_context_menu()
 
     def create_details_frame(self):
+        s = ttk.Style()
+        s.configure('Treeview.Heading', foreground="black", background="green3")
         self.detail_frame = ttk.Frame(self.root)
         self.detail_frame.pack(fill=tk.BOTH, expand=True)
 
