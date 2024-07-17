@@ -399,7 +399,7 @@ class DataSource:
         return words
     
     def reset(self):
-        self.selected_words = random.sample(self.words, k=min(self.num_words, len(self.words)))
+        self.selected_words = random.choices(self.words, k=self.num_words)
         self.index = 0
 
     def get_next_word(self):
