@@ -399,7 +399,10 @@ class DataSource:
         return words
     
     def reset(self):
-        self.selected_words = random.choices(self.words, k=self.num_words)
+        if self.num_words <= len(self.words): # pefer unique selection
+            self.selected_words = random.sample(self.words, k = self.num_words)
+        else:
+            self.selected_words = random.choices(self.words, k=self.num_words)
         self.index = 0
 
     def get_next_word(self):
