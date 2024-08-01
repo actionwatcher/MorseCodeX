@@ -1,29 +1,42 @@
-import sounddevice as sd
 import numpy as np
+import sounddevice as sd
+import soundfile as sf
 from time import sleep, time
 import threading
 from queue import Queue
-from pydub import AudioSegment
-from pydub.generators import Sine, WhiteNoise
 
 class SoundSource:
-    def __init__(self, generator=None, initial_volume=0):
+    def __init__(self, audio_segment, sample_rate=44100, initial_volume=1.0):
         """
-        :param generator: Function that generates AudioSegment of desired duration
-        :param initial_volume: Initial volume in dB
+        :param audio_segment: Numpy array of audio samples
+        :param sample_rate: Sample rate for the audio
+        :param initial_volume: Initial volume as a float multiplier (1.0 = original volume)
         """
-        self.generator = generator
+        self.audio_segment = audio_segment * initial_volume
+        self.sample_rate = sample_rate
         self.volume = initial_volume
         self.active = True
 
+    @classmethod
+    def from_generator(cls, generator, duration, sample_rate=44100, initial_volume=1.0):
+        audio_segment = generator(duration, sample_rate)
+        return cls(audio_segment, sample_rate, initial_volume)
+
+    @classmethod
+    def from_file(cls, file_path, initial_volume=1.0):
+        audio_segment, sample_rate = sf.read(file_path, dtype='float32')
+        return cls(audio_segment, sample_rate, initial_volume)
+
     def set_volume(self, volume):
         self.volume = volume
+        self.audio_segment = self.audio_segment * self.volume
 
     def get_audio_segment(self, duration):
         if not self.active:
-            return AudioSegment.silent(duration=duration)
-        audio_segment = self.generator(duration)
-        return audio_segment + self.volume
+            return np.zeros(int(duration * self.sample_rate))
+        
+        segment_length = int(duration * self.sample_rate)
+        return np.tile(self.audio_segment, (segment_length // len(self.audio_segment) + 1))[:segment_length]
 
     def deactivate(self):
         self.active = False
@@ -32,7 +45,7 @@ class SoundSource:
         self.active = True
 
 class ContinuousPlayer:
-    def __init__(self, interval=100):
+    def __init__(self, interval=0.1):
         self.sources = []
         self.interval = interval
         self.playing = False
@@ -56,30 +69,47 @@ class ContinuousPlayer:
 
     def _mix_audio(self, duration):
         start_time = time()
+        sample_rate = 44100
+        interval_samples = int(self.interval * sample_rate)
+
         while self.playing:
-            if duration and (time() - start_time) * 1000 >= duration:
+            if duration and (time() - start_time) >= duration:
                 self.playing = False
                 break
 
-            mixed_audio = AudioSegment.silent(duration=self.interval)
+            mixed_audio = np.zeros(interval_samples)
             for source in self.sources:
                 audio_segment = source.get_audio_segment(self.interval)
-                mixed_audio = mixed_audio.overlay(audio_segment)
-            
-            self.queue.put(mixed_audio.raw_data)
+                mixed_audio += audio_segment
+
+            mixed_audio = np.clip(mixed_audio, -1.0, 1.0)
+            self.queue.put(mixed_audio)
+            sleep(self.interval)
 
     def _play_audio(self):
-        stream = sd.OutputStream(samplerate=44100, channels=1, dtype='int16')
-        stream.start()
-        while self.playing:
-            if self.queue.empty():
-                continue
-            raw_data = self.queue.get()
-            audio_data = np.frombuffer(raw_data, dtype=np.int16)
-            stream.write(audio_data)
+        sample_rate = 44100
 
-        stream.stop()
-        stream.close()
+        def callback(outdata, frames, time, status):
+            if status:
+                print(status)
+            if not self.queue.empty():
+                mixed_audio = self.queue.get()
+                # Ensure the mixed audio has enough frames
+                if len(mixed_audio) < frames:
+                    outdata[:len(mixed_audio)] = mixed_audio.reshape(-1, 1)
+                    outdata[len(mixed_audio):] = 0
+                else:
+                    outdata[:] = mixed_audio[:frames].reshape(-1, 1)
+                    # If mixed_audio has more frames, put the remaining back to the queue
+                    self.queue.put(mixed_audio[frames:])
+            else:
+                outdata.fill(0)  # Fill with silence if no audio is available
+
+        with sd.OutputStream(samplerate=sample_rate, channels=1, dtype='float32', callback=callback):
+            while self.playing or not self.queue.empty():
+                sleep(0.01)  # Keep the main thread alive and responsive
+
+        sd.stop()
 
     def stop(self):
         self.playing = False
@@ -88,22 +118,32 @@ class ContinuousPlayer:
         if self.playing_thread:
             self.playing_thread.join()
 
+# Functions to generate Morse code and noise
+def generate_morse_code_segment(duration, sample_rate=44100):
+    frequency = 1000  # 1000 Hz tone
+    t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
+    return 0.5 * np.sin(2 * np.pi * frequency * t)
+
+def generate_noise_segment(duration, sample_rate=44100):
+    return np.random.normal(0, 0.5, int(sample_rate * duration))
+
 # Example usage
-def generate_morse_code_segment(duration):
-    return Sine(1000).to_audio_segment(duration=duration)
+morse_duration = 10  # Duration for the pre-generated Morse code segment
+noise_duration = 10  # Duration for the pre-generated noise segment
 
-def generate_noise_segment(duration):
-    return WhiteNoise().to_audio_segment(duration=duration)
+morse_source = SoundSource.from_generator(generator=generate_morse_code_segment, duration=morse_duration, initial_volume=0.5)
+noise_source = SoundSource.from_generator(generator=generate_noise_segment, duration=noise_duration, initial_volume=0.2)
 
-morse_source = SoundSource(generator=generate_morse_code_segment, initial_volume=-20)
-noise_source = SoundSource(generator=generate_noise_segment, initial_volume=-20)
+# Load an audio file (replace 'path/to/audio/file.wav' with your actual file path)
+file_source = SoundSource.from_file('path/to/audio/file.wav', initial_volume=0.3)
 
 player = ContinuousPlayer()
 player.add_source(noise_source)  # Continuous background noise
 player.add_source(morse_source)  # Morse code sound
+player.add_source(file_source)   # Audio file sound
 
 # Start streaming
-player.start(duration=10000)  # Play for 10 seconds
+player.start(duration=10)  # Play for 10 seconds
 
 # To stop manually, you can call:
 # player.stop()

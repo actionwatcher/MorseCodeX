@@ -10,6 +10,7 @@ from NoiseSoundSource import NoiseSoundSource
 from Mixer import Mixer
 from MorseSoundSource import MorseSoundSource
 import numpy as np
+import wave
     
 
 class MorseTrainerUI:
@@ -187,8 +188,24 @@ class MorseTrainerUI:
         def generate_noise_segment(duration, sample_rate=44100):
             return np.random.normal(0, 0.5, int(sample_rate * duration))
         noise_duration = 10  # Duration for the pre-generated noise segment
-        noise_source = NoiseSoundSource(generator=generate_noise_segment, duration=noise_duration, initial_volume=0.2)
+        noise_source = NoiseSoundSource(generator=generate_noise_segment, duration=noise_duration, initial_volume=0.5)
+        def read_wav(file_path):
+            with wave.open(file_path, 'rb') as wf:
+                sample_rate = wf.getframerate()
+                n_channels = wf.getnchannels()
+                n_frames = wf.getnframes()
+                audio_data = wf.readframes(n_frames)
+                audio_segment = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+                if n_channels == 2:
+                    audio_segment = audio_segment.reshape(-1, 2).mean(axis=1)
+            return audio_segment, sample_rate
+
+        audio_segment, sample_rate = read_wav('lightdimmer.wav')
+        noise_duration=float(len(audio_segment))/sample_rate
+        file_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=sample_rate, 
+                                       duration=noise_duration, initial_volume=1.0)
         self.player.add_source(noise_source)  # Continuous background noise
+        self.player.add_source(file_source)
         self.play_word(3)
   
 
