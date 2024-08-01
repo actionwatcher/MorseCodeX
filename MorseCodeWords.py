@@ -108,7 +108,7 @@ class MorseTrainerUI:
 
     def create_sound_frame(self, main_frame, row=0, col=1, rowspan=4, test_button=False):
         sound_frame = ttk.LabelFrame(main_frame, text="Sound")
-        sound_frame.grid(row=row, column=col, rowspan=rowspan, padx=10, pady=5, sticky="w")
+        sound_frame.grid(row=row, column=col, rowspan=rowspan, padx=10, pady=5, sticky="ns")
 
         ttk.Label(sound_frame, text="Volume").grid(row=0, column=0, padx=5, pady=5)
         self.volume_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_volume)
@@ -175,7 +175,7 @@ class MorseTrainerUI:
         self.entry_field.bind("<Return>", self.process_entry)
         self.entry_field.focus_set()
 
-        self.create_volume_frame(main_frame)
+        self.create_sound_frame(main_frame, row=0, col=1, rowspan=4)
         
 
         self.quit_button = Button(main_frame, text="Quit", command=self.quit_app)
@@ -213,24 +213,6 @@ class MorseTrainerUI:
         self.softness = self.softness_slider.get()
         softness_value = max(0, 1.0 - float(self.softness)/100.0) * 0.3
         self.morse_sound.set_rise(softness_value)
-
-    def create_volume_frame(self, main_frame, raw=0, col=1, rowspan = 4, test_button = False):
-        sound_frame = ttk.LabelFrame(main_frame, text="Sound")
-        sound_frame.grid(row=0, column=1, rowspan=4, padx=10, pady=5, sticky="ns")
-
-        ttk.Label(sound_frame, text="Volume").grid(row=0, column=0, padx=5, pady=5)
-        self.volume_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_volume)
-        self.volume_slider.set(self.volume)
-        self.volume_slider.grid(row=1, column=0, padx=5, pady=5)
-
-        ttk.Label(sound_frame, text="Softness").grid(row=0, column=1, padx=5, pady=5)
-        self.softness_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_softness)
-        #self.softness_slider.set((1.0 - self.morse_sound.get_rise()/0.3) * 100)
-        self.softness_slider.set(self.softness)
-        self.softness_slider.grid(row=1, column=1, padx=5, pady=5)
-        if test_button:
-            self.test_volume_button = Button(sound_frame, text="Test Volume", command=self.play_volume_test)
-            self.test_volume_button.grid(row=2, column=0, columnspan=2, pady=5)
 
     def create_session_results_screen(self):
         if self.current_session is None:
