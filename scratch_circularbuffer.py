@@ -72,7 +72,8 @@ class ContinuousPlayer:
             mixed_audio = np.zeros(interval_samples)
             for source in self.sources:
                 audio_segment = source.get_audio_segment(self.interval)
-                mixed_audio += audio_segment
+                if mixed_audio.shape == audio_segment.shape:
+                    mixed_audio += audio_segment
 
             #mixed_audio = np.clip(mixed_audio, -1.0, 1.0)
             self.queue.put(mixed_audio)

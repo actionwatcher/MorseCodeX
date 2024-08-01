@@ -5,8 +5,12 @@ from tkmacosx import Button
 import threading
 from datetime import datetime, timedelta
 import shelve
-from MorseSound import MorseSound
 from SessionDB import Session, SessionDB
+from NoiseSoundSource import NoiseSoundSource
+from Mixer import Mixer
+from MorseSoundSource import MorseSoundSource
+import numpy as np
+    
 
 class MorseTrainerUI:
     def __init__(self, root, morse_sound, compare_function):
@@ -19,6 +23,9 @@ class MorseTrainerUI:
         self.root.geometry(f"{self.ui_width}x{self.ui_height}")  # 5:3 aspect ratio
         self.load_settings()
         self.session_db = SessionDB()
+        self.t = [0]
+        self.player = Mixer()
+        self.player.add_source(self.morse_sound)
         self.create_start_screen()
 
     def load_settings(self):
@@ -85,6 +92,8 @@ class MorseTrainerUI:
         self.quit_button.grid(row=3, column=1, padx=5, pady=5)
 
         self.create_sound_frame(content_frame, row=0, col=1, test_button=True)
+        del self.player.sources[1:] #remove all active noise sources 
+        self.player.start()
 
 
     def select_file(self):
@@ -113,7 +122,6 @@ class MorseTrainerUI:
         if test_button:
             self.test_volume_button = Button(sound_frame, text="Test Volume", command=self.play_volume_test)
             self.test_volume_button.grid(row=2, column=0, columnspan=2, pady=5)
-
 
     def select_file(self):
         file_path = filedialog.askopenfilename(
@@ -171,11 +179,17 @@ class MorseTrainerUI:
 
         self.quit_button = Button(main_frame, text="Quit", command=self.quit_app)
         self.quit_button.grid(row=4, column=0, padx=5, pady=5)
-        self.root.bind("<F6>", lambda event: self.get_next_word(delay=1, replay=True))
+        self.root.bind("<F6>", lambda event: self.play_word(delay=1, replay=True))
 
         self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()))
         self.play_volume_test()
-        self.get_next_word(3)
+        # Start streaming
+        def generate_noise_segment(duration, sample_rate=44100):
+            return np.random.normal(0, 0.5, int(sample_rate * duration))
+        noise_duration = 10  # Duration for the pre-generated noise segment
+        noise_source = NoiseSoundSource(generator=generate_noise_segment, duration=noise_duration, initial_volume=0.2)
+        self.player.add_source(noise_source)  # Continuous background noise
+        self.play_word(3)
   
 
     def update_softness(self, event):
@@ -358,23 +372,24 @@ class MorseTrainerUI:
         self.sent_text.config(text=sent_text)
         morse_sound.set_speed(float(self.current_speed))
         self.update_data_frame()
-        self.get_next_word(delay)
+        self.play_word(delay)
     
     def update_data_frame(self):
         self.speed_label.config(text=f"Speed: {self.current_speed} WPM")
         self.score_label.config(text=f"Score: {self.current_session.score}")
         self.count_label.config(text=f"Count: {self.received_cnt}")
 
-    def get_next_word(self, delay, replay=False):
+    def play_word(self, delay, replay=False):
         if replay == False:
             self.sent_word = self.data_source.get_next_word()
             if not self.sent_word:
-                #self.create_results_screen()
+                self.player.stop()
                 self.create_session_results_screen()
                 return
         threading.Timer(delay, self.morse_sound.play_string, args=[self.sent_word]).start()
 
     def quit_app(self):
+        self.player.stop()
         self.save_settings()
         self.root.quit()
 
@@ -433,6 +448,6 @@ def compare(sent_word, received_word):
 
 # Create main application window
 root = tk.Tk()
-morse_sound = MorseSound()  # Assuming MorseSound is defined elsewhere
+morse_sound = MorseSoundSource()
 app = MorseTrainerUI(root, morse_sound, compare)
 root.mainloop()
