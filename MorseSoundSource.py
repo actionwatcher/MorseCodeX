@@ -1,6 +1,5 @@
 import numpy as np
 import sounddevice as sd
-import threading
 import queue
 
 class MorseSoundSource:
@@ -115,14 +114,11 @@ class MorseSoundSource:
             "word_gap_array": self.word_gap_array
         }
 
-    def play_string_impl_(self, message):
+    def play_string(self, message):
         morse_code_list = self._convert_to_morse(message)
         if morse_code_list:
             signal = self._generate_signal(morse_code_list)
             self.data_queue.put(signal)
-
-    def play_string(self, message):
-        threading.Thread(target=self.play_string_impl_, args=(message,), daemon=True).start()
     
     def get_audio_segment(self, duration):
         size = int(self.sample_rate * duration)

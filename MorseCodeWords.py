@@ -11,6 +11,7 @@ from Mixer import Mixer
 from MorseSoundSource import MorseSoundSource
 import numpy as np
 import wave
+import time
     
 
 class MorseTrainerUI:
@@ -27,6 +28,28 @@ class MorseTrainerUI:
         self.t = [0]
         self.player = Mixer()
         self.player.add_source(self.morse_sound)
+        def read_wav(file_path):
+            with wave.open(file_path, 'rb') as wf:
+                sample_rate = wf.getframerate()
+                n_channels = wf.getnchannels()
+                n_frames = wf.getnframes()
+                audio_data = wf.readframes(n_frames)
+                audio_segment = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+                if n_channels == 2:
+                    audio_segment = audio_segment.reshape(-1, 2).mean(axis=1)
+            return audio_segment, sample_rate
+
+        audio_segment, sample_rate = read_wav('lightdimmer.wav')
+        noise_duration=float(len(audio_segment))/sample_rate
+        self.file_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=sample_rate, 
+                                       duration=noise_duration, initial_volume=1.0)
+        noise_duration = 10  # Duration for the pre-generated noise segment
+        white_noise = np.random.normal(0, 0.5, int(sample_rate * noise_duration))
+        self.white_noise_source = NoiseSoundSource(audio_segment=white_noise, duration=noise_duration, sample_rate=sample_rate, initial_volume=0.5)
+        self.player.add_source(self.file_source)  # Continuous background noise
+        self.player.add_source(self.white_noise_source)
+        
+
         self.create_start_screen()
 
     def load_settings(self):
@@ -37,6 +60,7 @@ class MorseTrainerUI:
             self.file_path_var = tk.StringVar(value=settings.get('file_path', 'MASTER.SCP'))
             self.volume = settings.get('volume', 50)
             self.softness = settings.get('softness', 33)
+            self.noise = settings.get('noise', 33)
 
 
     def save_settings(self):
@@ -47,6 +71,7 @@ class MorseTrainerUI:
             settings['file_path'] = self.file_path_var.get()
             settings['volume'] = self.volume
             settings['softness'] = self.softness
+            settings['noise'] = self.noise
 
 
     def create_start_screen(self):
@@ -93,8 +118,6 @@ class MorseTrainerUI:
         self.quit_button.grid(row=3, column=1, padx=5, pady=5)
 
         self.create_sound_frame(content_frame, row=0, col=1, test_button=True)
-        del self.player.sources[1:] #remove all active noise sources 
-        self.player.start()
 
 
     def select_file(self):
@@ -109,20 +132,28 @@ class MorseTrainerUI:
     def create_sound_frame(self, main_frame, row=0, col=1, rowspan=4, test_button=False):
         sound_frame = ttk.LabelFrame(main_frame, text="Sound")
         sound_frame.grid(row=row, column=col, rowspan=rowspan, padx=10, pady=5, sticky="ns")
+        volume_col = 0
+        softness_col = 1
+        noise_col = 2
 
-        ttk.Label(sound_frame, text="Volume").grid(row=0, column=0, padx=5, pady=5)
+        ttk.Label(sound_frame, text="Volume").grid(row=0, column=volume_col, padx=5, pady=5)
         self.volume_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_volume)
         self.volume_slider.set(self.volume)
-        self.volume_slider.grid(row=1, column=0, padx=5, pady=5)
+        self.volume_slider.grid(row=1, column=volume_col, padx=5, pady=5)
 
-        ttk.Label(sound_frame, text="Softness").grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(sound_frame, text="Softness").grid(row=0, column=softness_col, padx=5, pady=5)
         self.softness_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_softness)
         self.softness_slider.set(self.softness)
-        self.softness_slider.grid(row=1, column=1, padx=5, pady=5)
+        self.softness_slider.grid(row=1, column=softness_col, padx=5, pady=5)
+
+        ttk.Label(sound_frame, text="Noise").grid(row=0, column=noise_col, padx=5, pady=5)
+        self.noise_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_noise)
+        self.noise_slider.set(self.noise)
+        self.noise_slider.grid(row=1, column=noise_col, padx=5, pady=5)
 
         if test_button:
-            self.test_volume_button = Button(sound_frame, text="Test Volume", command=self.play_volume_test)
-            self.test_volume_button.grid(row=2, column=0, columnspan=2, pady=5)
+            self.test_sound_button = Button(sound_frame, text="Test Sound", command=self.play_volume_test)
+            self.test_sound_button.grid(row=2, column=0, columnspan=2, pady=5)
 
     def select_file(self):
         file_path = filedialog.askopenfilename(
@@ -183,29 +214,8 @@ class MorseTrainerUI:
         self.root.bind("<F6>", lambda event: self.play_word(delay=1, replay=True))
 
         self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()))
-        self.play_volume_test()
-        # Start streaming
-        def generate_noise_segment(duration, sample_rate=44100):
-            return np.random.normal(0, 0.5, int(sample_rate * duration))
-        noise_duration = 10  # Duration for the pre-generated noise segment
-        noise_source = NoiseSoundSource(generator=generate_noise_segment, duration=noise_duration, initial_volume=0.5)
-        def read_wav(file_path):
-            with wave.open(file_path, 'rb') as wf:
-                sample_rate = wf.getframerate()
-                n_channels = wf.getnchannels()
-                n_frames = wf.getnframes()
-                audio_data = wf.readframes(n_frames)
-                audio_segment = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
-                if n_channels == 2:
-                    audio_segment = audio_segment.reshape(-1, 2).mean(axis=1)
-            return audio_segment, sample_rate
-
-        audio_segment, sample_rate = read_wav('lightdimmer.wav')
-        noise_duration=float(len(audio_segment))/sample_rate
-        file_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=sample_rate, 
-                                       duration=noise_duration, initial_volume=1.0)
-        self.player.add_source(noise_source)  # Continuous background noise
-        self.player.add_source(file_source)
+        self.player.start()
+        self.morse_sound.play_string("vvv")
         self.play_word(3)
   
 
@@ -213,6 +223,12 @@ class MorseTrainerUI:
         self.softness = self.softness_slider.get()
         softness_value = max(0, 1.0 - float(self.softness)/100.0) * 0.3
         self.morse_sound.set_rise(softness_value)
+
+    def update_noise(self, event):
+        self.noise = self.noise_slider.get()
+        volume = max(0, 1.0 - float(self.noise)/100.0)
+        self.file_source.set_volume(volume)
+        self.white_noise_source.set_volume(volume)
 
     def create_session_results_screen(self):
         if self.current_session is None:
@@ -343,7 +359,10 @@ class MorseTrainerUI:
         self.morse_sound.set_volume(volume)
 
     def play_volume_test(self):
+        self.player.start()
         self.morse_sound.play_string("Vvv")
+        root.after(3000, self.player.stop)
+
 
     def start_training(self):
         self.current_speed = (self.init_speed.get())

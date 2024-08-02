@@ -50,7 +50,7 @@ class NoiseSoundSource:
             ))
 
         self.current_position = end_position
-        return segment * self.volume
+        return segment
 
     def deactivate(self):
         self.active = False
