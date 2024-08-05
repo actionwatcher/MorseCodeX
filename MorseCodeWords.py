@@ -39,7 +39,7 @@ class MorseTrainerUI:
                     audio_segment = audio_segment.reshape(-1, 2).mean(axis=1)
             return audio_segment, sample_rate
 
-        audio_segment, sample_rate = read_wav('lightdimmer.wav')
+        audio_segment, sample_rate = read_wav('hfnoise.wav')
         noise_duration=float(len(audio_segment))/sample_rate
         self.file_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=sample_rate, 
                                        duration=noise_duration, initial_volume=1.0)
@@ -47,7 +47,6 @@ class MorseTrainerUI:
         white_noise = np.random.normal(0, 0.5, int(sample_rate * noise_duration))
         self.white_noise_source = NoiseSoundSource(audio_segment=white_noise, duration=noise_duration, sample_rate=sample_rate, initial_volume=0.5)
         self.player.add_source(self.file_source)  # Continuous background noise
-        self.player.add_source(self.white_noise_source)
         
 
         self.create_start_screen()
@@ -211,7 +210,7 @@ class MorseTrainerUI:
 
         self.quit_button = Button(main_frame, text="Quit", command=self.quit_app)
         self.quit_button.grid(row=4, column=0, padx=5, pady=5)
-        self.root.bind("<F6>", lambda event: self.play_word(delay=1, replay=True))
+        self.root.bind("<F7>", lambda event: self.play_word(delay=1, replay=True))
 
         self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()))
         self.player.start()
@@ -360,6 +359,8 @@ class MorseTrainerUI:
 
     def play_volume_test(self):
         self.player.start()
+        self.current_speed = (self.init_speed.get())
+        morse_sound.set_speed(float(self.current_speed))
         self.morse_sound.play_string("Vvv")
         root.after(3000, self.player.stop)
 
