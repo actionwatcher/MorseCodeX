@@ -52,7 +52,7 @@ class MorseTrainerUI:
         self.white_noise_source = NoiseSoundSource(audio_segment=white_noise, duration=noise_duration, sample_rate=sample_rate, initial_volume=0.5)
         self.player.add_source(self.file_source)  # Continuous background noise
         
-
+        self.start_enabled = True
         self.create_start_screen()
 
     def load_settings(self):
@@ -65,7 +65,8 @@ class MorseTrainerUI:
             self.softness = settings.get('softness', 33)
             self.noise = settings.get('noise', 33)
             self.ui_width = settings.get('ui_width',800)
-            self.ui_height =settings.get('ui_height', 400)            
+            self.ui_height =settings.get('ui_height', 400)
+            self.pre_msg_chk = tk.BooleanVar(value=settings.get('pre_msg', False))
 
 
     def save_settings(self):
@@ -79,6 +80,7 @@ class MorseTrainerUI:
             settings['noise'] = self.noise
             settings['ui_width'] = self.ui_width
             settings['ui_height'] = self.ui_height
+            settings['pre_msg'] = self.pre_msg_chk.get()
 
 
     def create_start_screen(self):
@@ -104,7 +106,7 @@ class MorseTrainerUI:
         selection_frame = ttk.LabelFrame(content_frame, text="Training parameters")
         selection_frame.grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
-        ttk.Label(selection_frame, text="Initial Speed (WPM):").grid(row=0, column=0, padx=5, pady=5)
+        ttk.Label(selection_frame, text="Min/Initial Speed (WPM):").grid(row=0, column=0, padx=5, pady=5)
         self.init_speed_entry = ttk.Entry(selection_frame, textvariable=self.init_speed)
         self.init_speed_entry.grid(row=0, column=1, padx=5, pady=5)
         
@@ -112,7 +114,7 @@ class MorseTrainerUI:
         self.max_speed_entry = ttk.Entry(selection_frame, textvariable=self.max_speed)
         self.max_speed_entry.grid(row=1, column=1, padx=5, pady=5)
 
-        ttk.Label(selection_frame, text="Training words count:").grid(row=2, column=0, padx=5, pady=5)
+        ttk.Label(selection_frame, text="Training messages count:").grid(row=2, column=0, padx=5, pady=5)
         self.training_word_count_entry = ttk.Entry(selection_frame, textvariable=self.training_word_count)
         self.training_word_count_entry.grid(row=2, column=1, padx=5, pady=5)
 
@@ -131,7 +133,7 @@ class MorseTrainerUI:
         file_path = filedialog.askopenfilename(
             title="Select a file",
             initialdir='.',
-            filetypes=(("Text files", "*.txt *.scp"), ("All files", "*.*"))
+            filetypes=(("Text files", "*.txt"), ("SCP", "*.scp"), ("All files", "*.*"))
         )
         if file_path:
             self.file_path_var.set(file_path)
@@ -142,6 +144,9 @@ class MorseTrainerUI:
         volume_col = 0
         softness_col = 1
         noise_col = 2
+        qrn_col = 3
+        qrm_col = 4
+        chk_box_col = 5
 
         ttk.Label(sound_frame, text="Volume").grid(row=0, column=volume_col, padx=5, pady=5)
         self.volume_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_volume)
@@ -158,18 +163,31 @@ class MorseTrainerUI:
         self.noise_slider.set(self.noise)
         self.noise_slider.grid(row=1, column=noise_col, padx=5, pady=5)
 
+        ttk.Label(sound_frame, text="QRN").grid(row=0, column=qrn_col, padx=5, pady=5)
+        self.noise_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_noise)
+        self.noise_slider.set(self.noise)
+        self.noise_slider.grid(row=1, column=qrn_col, padx=5, pady=5)
+
+        ttk.Label(sound_frame, text="QRM").grid(row=0, column=qrm_col, padx=5, pady=5)
+        self.noise_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_noise)
+        self.noise_slider.set(self.noise)
+        self.noise_slider.grid(row=1, column=qrm_col, padx=5, pady=5)
+
+        # def on_checkbox_select():
+        #     print(f" Option 2: {checkbox_var2.get()}")
+
+        # checkbox_var2 = tk.IntVar(value=0)
+
+        # # Add checkboxes to the sound_frame
+        # checkbox2 = ttk.Checkbutton(sound_frame, text="Option 2", variable=checkbox_var2, command=on_checkbox_select)
+        # checkbox2.grid(row=1, column=chk_box_col, sticky=tk.W, padx=5, pady=5)
+        
+        checkbox1 = ttk.Checkbutton(sound_frame, text="Pre message", variable=self.pre_msg_chk)
+        checkbox1.grid(row=4, column=0, sticky=tk.W, padx=5, pady=5)
+
         if test_button:
             self.test_sound_button = Button(sound_frame, text="Test Sound", command=self.play_volume_test)
             self.test_sound_button.grid(row=2, column=0, columnspan=2, pady=5)
-
-    def select_file(self):
-        file_path = filedialog.askopenfilename(
-            title="Select a file",
-            initialdir='.',  # Set to current working directory
-            filetypes=(("Text files", "*.txt *.scp"), ("All files", "*.*"))
-        )
-        if file_path:
-            self.file_path_var.set(file_path)
 
     def create_main_screen(self):
         for widget in self.root.winfo_children():
@@ -220,7 +238,7 @@ class MorseTrainerUI:
         self.quit_button.grid(row=4, column=0, padx=5, pady=5)
         self.root.bind("<F7>", lambda event: self.play_word(delay=1, replay=True))
 
-        self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()))
+        self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()), pre_message=self.pre_msg_chk.get())
         self.player.start()
         self.morse_sound.play_string("vvv")
         self.play_word(3)
@@ -366,14 +384,20 @@ class MorseTrainerUI:
         self.morse_sound.set_volume(volume)
 
     def play_volume_test(self):
+        self.start_enabled = False
         self.player.start()
         self.current_speed = (self.init_speed.get())
         morse_sound.set_speed(float(self.current_speed))
         self.morse_sound.play_string("Vvv")
-        root.after(3000, self.player.stop)
+        root.after(3000, self.on_sound_test_complete)
 
+    def on_sound_test_complete(self):
+        self.player.stop()
+        self.start_enabled = True
 
     def start_training(self):
+        if not self.start_enabled:
+            return
         self.current_speed = (self.init_speed.get())
         morse_sound.set_speed(float(self.current_speed))
         self.save_settings()
@@ -408,12 +432,12 @@ class MorseTrainerUI:
 
     def play_word(self, delay, replay=False):
         if replay == False:
-            self.sent_word = self.data_source.get_next_word()
+            self.pre_msg, self.sent_word = self.data_source.get_next_word()
             if not self.sent_word:
                 self.player.stop()
                 self.create_session_results_screen()
                 return
-        threading.Timer(delay, self.morse_sound.play_string, args=[self.sent_word]).start()
+        threading.Timer(delay, self.morse_sound.play_string, args=[self.pre_msg+self.sent_word]).start()
     
     def on_geometry_change(self, event):
         if event.width < 600 or event.height < 300:
