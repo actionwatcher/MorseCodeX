@@ -25,10 +25,9 @@ class MorseTrainerUI:
         self.morse_sound = morse_sound
         self.compare_function = compare_function
         self.root.title("CW Training Machine")
-        self.ui_width = 800
-        self.ui_height = int(self.ui_width*0.7)
-        self.root.geometry(f"{self.ui_width}x{self.ui_height}")  # 5:3 aspect ratio
         self.load_settings()
+        self.root.geometry(f"{self.ui_width}x{self.ui_height}")
+        self.root.bind("<Configure>", self.on_geometry_change)
         self.session_db = SessionDB()
         self.t = [0]
         self.player = Mixer()
@@ -65,6 +64,8 @@ class MorseTrainerUI:
             self.volume = settings.get('volume', 50)
             self.softness = settings.get('softness', 33)
             self.noise = settings.get('noise', 33)
+            self.ui_width = settings.get('ui_width',800)
+            self.ui_height =settings.get('ui_height', 400)            
 
 
     def save_settings(self):
@@ -76,6 +77,8 @@ class MorseTrainerUI:
             settings['volume'] = self.volume
             settings['softness'] = self.softness
             settings['noise'] = self.noise
+            settings['ui_width'] = self.ui_width
+            settings['ui_height'] = self.ui_height
 
 
     def create_start_screen(self):
@@ -411,6 +414,14 @@ class MorseTrainerUI:
                 self.create_session_results_screen()
                 return
         threading.Timer(delay, self.morse_sound.play_string, args=[self.sent_word]).start()
+    
+    def on_geometry_change(self, event):
+        if event.width < 600 or event.height < 300:
+            return
+        self.ui_width = event.width
+        self.ui_height = event.height
+        self.save_settings()
+
 
     def quit_app(self):
         self.player.stop()
