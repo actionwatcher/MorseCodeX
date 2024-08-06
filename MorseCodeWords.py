@@ -53,6 +53,7 @@ class MorseTrainerUI:
         self.player.add_source(self.file_source)  # Continuous background noise
         
         self.start_enabled = True
+        self.speed_increase = True
         self.create_start_screen()
 
     def load_settings(self):
@@ -431,7 +432,9 @@ class MorseTrainerUI:
         
         if score == len(sent_text):
             c = 'green'
-            self.current_speed = min(self.current_speed + 1, self.max_speed.get())
+            if self.speed_increase:
+                self.current_speed = min(self.current_speed + 1, self.max_speed.get())
+            self.speed_increase = True
         else:
             c = 'red'
             self.current_speed = max(self.current_speed - 1, self.init_speed.get())
@@ -453,6 +456,8 @@ class MorseTrainerUI:
                 self.player.stop()
                 self.create_session_results_screen()
                 return
+        else: 
+            self.speed_increase = False
         threading.Timer(delay, self.morse_sound.play_string, args=[self.pre_msg+self.sent_word]).start()
     
     def on_geometry_change(self, event):
