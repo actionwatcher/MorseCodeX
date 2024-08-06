@@ -20,9 +20,8 @@ import time
     
 
 class MorseTrainerUI:
-    def __init__(self, root, morse_sound, compare_function):
+    def __init__(self, root, compare_function):
         self.root = root
-        self.morse_sound = morse_sound
         self.compare_function = compare_function
         self.root.title("CW Training Machine")
         self.load_settings()
@@ -31,6 +30,7 @@ class MorseTrainerUI:
         self.session_db = SessionDB()
         self.t = [0]
         self.player = Mixer()
+        self.morse_sound = MorseSoundSource(wpm=self.init_speed.get(), frequency=self.frequency, rise_time=self.rise_time)
         self.player.add_source(self.morse_sound)
         def read_wav(file_path):
             with wave.open(file_path, 'rb') as wf:
@@ -67,6 +67,7 @@ class MorseTrainerUI:
             self.ui_width = settings.get('ui_width',800)
             self.ui_height =settings.get('ui_height', 400)
             self.pre_msg_chk = tk.BooleanVar(value=settings.get('pre_msg', False))
+            self.tone = settings.get('tone', 50)
 
 
     def save_settings(self):
@@ -81,6 +82,7 @@ class MorseTrainerUI:
             settings['ui_width'] = self.ui_width
             settings['ui_height'] = self.ui_height
             settings['pre_msg'] = self.pre_msg_chk.get()
+            settings['tone'] = self.tone
 
 
     def create_start_screen(self):
@@ -141,11 +143,7 @@ class MorseTrainerUI:
     def create_sound_frame(self, main_frame, row=0, col=1, rowspan=4, test_button=False):
         sound_frame = ttk.LabelFrame(main_frame, text="Sound")
         sound_frame.grid(row=row, column=col, rowspan=rowspan, padx=10, pady=5, sticky="ns")
-        volume_col = 0
-        softness_col = 1
-        noise_col = 2
-        qrn_col = 3
-        qrm_col = 4
+        volume_col, softness_col, tone_col,noise_col,qrn_col,qrm_col = range(6)
         chk_box_col = 5
 
         ttk.Label(sound_frame, text="Volume").grid(row=0, column=volume_col, padx=5, pady=5)
@@ -157,6 +155,11 @@ class MorseTrainerUI:
         self.softness_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_softness)
         self.softness_slider.set(self.softness)
         self.softness_slider.grid(row=1, column=softness_col, padx=5, pady=5)
+
+        ttk.Label(sound_frame, text="Tone").grid(row=0, column=tone_col, padx=5, pady=5)
+        self.tone_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_tone)
+        self.tone_slider.set(self.tone)
+        self.tone_slider.grid(row=1, column=tone_col, padx=5, pady=5)
 
         ttk.Label(sound_frame, text="Noise").grid(row=0, column=noise_col, padx=5, pady=5)
         self.noise_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_noise)
@@ -246,9 +249,20 @@ class MorseTrainerUI:
 
     def update_softness(self, event):
         self.softness = self.softness_slider.get()
-        softness_value = max(0, 1.0 - float(self.softness)/100.0) * 0.3
-        self.morse_sound.set_rise(softness_value)
+        self.morse_sound.set_rise(rise_time=self.rise_time)
 
+    @property
+    def rise_time(self):
+        return max(0, 1.0 - float(self.softness)/100.0) * 0.3
+    
+    def update_tone(self, event):
+        self.tone = self.tone_slider.get()
+        self.morse_sound.set_frequency(self.frequency)
+
+    @property
+    def frequency(self):
+        return int(500 + (1.0 - float(self.tone)/100) * 350) # 500-850 hz
+    
     def update_noise(self, event):
         self.noise = self.noise_slider.get()
         volume = max(0, 1.0 - float(self.noise)/100.0)
@@ -384,10 +398,12 @@ class MorseTrainerUI:
         self.morse_sound.set_volume(volume)
 
     def play_volume_test(self):
+        if not self.start_enabled:
+            return
         self.start_enabled = False
         self.player.start()
         self.current_speed = (self.init_speed.get())
-        morse_sound.set_speed(float(self.current_speed))
+        self.morse_sound.set_speed(float(self.current_speed))
         self.morse_sound.play_string("Vvv")
         root.after(3000, self.on_sound_test_complete)
 
@@ -399,7 +415,7 @@ class MorseTrainerUI:
         if not self.start_enabled:
             return
         self.current_speed = (self.init_speed.get())
-        morse_sound.set_speed(float(self.current_speed))
+        self.morse_sound.set_speed(float(self.current_speed))
         self.save_settings()
         self.create_main_screen()
 
@@ -421,7 +437,7 @@ class MorseTrainerUI:
             self.current_speed = max(self.current_speed - 1, self.init_speed.get())
         self.received_text.config(text=received_text, fg=c)
         self.sent_text.config(text=sent_text)
-        morse_sound.set_speed(float(self.current_speed))
+        self.morse_sound.set_speed(float(self.current_speed))
         self.update_data_frame()
         self.play_word(delay)
     
@@ -468,6 +484,5 @@ def compare(sent_word, received_word):
 
 # Create main application window
 root = tk.Tk()
-morse_sound = MorseSoundSource()
-app = MorseTrainerUI(root, morse_sound, compare)
+app = MorseTrainerUI(root, compare)
 root.mainloop()
