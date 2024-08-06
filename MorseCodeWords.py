@@ -1,7 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
 from tkinter import messagebox
-from tkmacosx import Button
+import platform
+if platform.system() == 'Darwin':
+    from tkmacosx import Button
+else:
+    Button = tk.Button
 import threading
 from datetime import datetime, timedelta
 import shelve
