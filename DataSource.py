@@ -1,13 +1,14 @@
 import random
 
 class DataSource:
-    def __init__(self, file_path='MASTER.SCP', num_words=50, pre_message=False):
+    def __init__(self, file_path='MASTER.SCP', num_words=50, pre_message=False, serial=False):
         self.names = []  # List to store encountered names
         self.num_words = num_words
         self.pre_msgs_selection = []
         self.pre_msgs = []
         if pre_message:
             self.pre_msgs_selection = ('tu ,'*20+','*8+'r ,'*4+'qsl ,'+'ur ,'+'5nn ').split(',')
+        self.generate_sernum = serial
         self.msgs = self._load_words(file_path)
         self.reset()
 
@@ -17,9 +18,17 @@ class DataSource:
         default_names = ['Joe', 'John', 'Nick', 'Mike', 'Geo'] #in case if no name yet present in the dictionalry
         try:
             pre_msg = ''
+            ser_num=''
             with open(file_path, 'r') as file:
                 for line_number, line in enumerate(file):
                     line = line.strip()
+                    if self.generate_sernum:
+                        ser_num = str(random.randint(1, 1300)) + ' '
+                        if random.choice([0, 1, 2]) == 0: # in 1/3 cases
+                            ser_num = ser_num.replace('1', 'a').replace('9', 'n').replace('0', 't')
+                        else: # zero fill
+                            while(len(ser_num)<4):
+                                ser_num = 't' + ser_num
                     if line_number == 0 and line.startswith('!!Order!!'):
                         format_spec = [field.strip() for field in line.split('!!Order!!')[1].split(',') if field.strip()]
                     elif line and not line.startswith('#'):
@@ -46,9 +55,9 @@ class DataSource:
                             combined_string = ' '.join(
                                 word_dict[field] for field in format_spec if field not in ('Call', 'UserText')
                             )
-                            words.append(combined_string)
+                            words.append(ser_num + combined_string)
                         else:
-                            words.append(line)
+                            words.append(ser_num + line)
         except FileNotFoundError:
             print(f"File {file_path} not found.")
         return words
@@ -76,6 +85,12 @@ if __name__ == '__main__':
         print(data_source.get_next_word())
     
     data_source = DataSource(file_path='NAQPCW.txt', num_words=10, pre_message=True)
+    print('Testing super-check partial file with NAQPCW.txt')
+    for _ in range(5):
+        print(data_source.get_next_word())
+
+
+    data_source = DataSource(file_path='NAQPCW.txt', num_words=10, pre_message=True, serial=True)
     print('Testing super-check partial file with NAQPCW.txt')
     for _ in range(5):
         print(data_source.get_next_word())

@@ -20,6 +20,8 @@ import time
     
 
 class MorseTrainerUI:
+    shortcuts = {'T':'0', 'A':'1', 'N':'9'}
+
     def __init__(self, root, compare_function):
         self.root = root
         self.compare_function = compare_function
@@ -69,6 +71,7 @@ class MorseTrainerUI:
             self.ui_height =settings.get('ui_height', 400)
             self.pre_msg_chk = tk.BooleanVar(value=settings.get('pre_msg', False))
             self.tone = settings.get('tone', 50)
+            self.generate_ser_num = tk.BooleanVar(value=settings.get('ser_num', False))
 
 
     def save_settings(self):
@@ -84,6 +87,7 @@ class MorseTrainerUI:
             settings['ui_height'] = self.ui_height
             settings['pre_msg'] = self.pre_msg_chk.get()
             settings['tone'] = self.tone
+            settings['ser_num'] = self.generate_ser_num.get()
 
 
     def create_start_screen(self):
@@ -177,14 +181,9 @@ class MorseTrainerUI:
         self.noise_slider.set(self.noise)
         self.noise_slider.grid(row=1, column=qrm_col, padx=5, pady=5)
 
-        # def on_checkbox_select():
-        #     print(f" Option 2: {checkbox_var2.get()}")
-
-        # checkbox_var2 = tk.IntVar(value=0)
-
         # # Add checkboxes to the sound_frame
-        # checkbox2 = ttk.Checkbutton(sound_frame, text="Option 2", variable=checkbox_var2, command=on_checkbox_select)
-        # checkbox2.grid(row=1, column=chk_box_col, sticky=tk.W, padx=5, pady=5)
+        checkbox2 = ttk.Checkbutton(sound_frame, text="SerNumber", variable=self.generate_ser_num)
+        checkbox2.grid(row=4, column=1, sticky=tk.W, padx=5, pady=5)
         
         checkbox1 = ttk.Checkbutton(sound_frame, text="Pre message", variable=self.pre_msg_chk)
         checkbox1.grid(row=4, column=0, sticky=tk.W, padx=5, pady=5)
@@ -242,7 +241,8 @@ class MorseTrainerUI:
         self.quit_button.grid(row=4, column=0, padx=5, pady=5)
         self.root.bind("<F7>", lambda event: self.play_word(delay=1, replay=True))
 
-        self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()), pre_message=self.pre_msg_chk.get())
+        self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()), 
+                                      pre_message=self.pre_msg_chk.get(), serial=self.generate_ser_num.get())
         self.player.start()
         self.morse_sound.play_string("vvv")
         self.play_word(3)
@@ -387,7 +387,7 @@ class MorseTrainerUI:
             for item in self.pair_tree.get_children():
                 self.pair_tree.delete(item)
             for received, sent, speed, duration in self.selected_session.items:
-                s, m = compare(sent, received)
+                s, m = self.compare_function(sent, received, self.shortcuts)
                 t = 'correct'
                 if s != len(sent):
                     t = 'in' + t
@@ -424,7 +424,7 @@ class MorseTrainerUI:
         received_text = self.entry_field.get().upper()
         self.entry_field.delete(0, tk.END)
         sent_text = self.sent_word.upper()
-        score, correctness_mask = self.compare_function(sent_text, received_text)
+        score, correctness_mask = self.compare_function(sent_text, received_text, self.shortcuts)
 
         self.current_session.add_item(received=received_text, sent=sent_text, speed=self.current_speed, duration=1.3)
         self.current_session.set_score(self.current_session.get_score() + score)
@@ -474,11 +474,11 @@ class MorseTrainerUI:
         self.root.quit()
 
 
-def compare(sent_word, received_word):
-    
+def compare(sent_word, received_word, shortcuts):
+    #if shortcuts = {'T':'0', 'A':'1', 'N':'9'}
     # Compare characters in lowercase
-    score = len([1 for s, r in zip(sent_word, received_word) if s == r])
-    correctness_mask = [s == r for s, r in zip(sent_word, received_word)]
+    correctness_mask = [((s == r) or ((s in shortcuts) and r == shortcuts[s])) for s, r in zip(sent_word, received_word)]
+    score = sum(correctness_mask)
 
     # Extend the correctness mask if the received word is longer
     if len(correctness_mask) < len(received_word):
