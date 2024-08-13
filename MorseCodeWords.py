@@ -7,6 +7,7 @@ if platform.system() == 'Darwin':
 else:
     Button = tk.Button
 import threading
+import os
 from datetime import datetime, timedelta
 import shelve
 from SessionDB import Session, SessionDB
@@ -15,14 +16,14 @@ from Mixer import Mixer
 from MorseSoundSource import MorseSoundSource
 from DataSource import DataSource
 import numpy as np
-import wave
-import time
+import helpers
+#import time
     
 
 class MorseTrainerUI:
     shortcuts = {'T':'0', 'A':'1', 'N':'9'}
 
-    def __init__(self, root, compare_function):
+    def __init__(self, root, compare_function, data_path):
         self.root = root
         self.compare_function = compare_function
         self.root.title("CW Training Machine")
@@ -34,25 +35,16 @@ class MorseTrainerUI:
         self.player = Mixer()
         self.morse_sound = MorseSoundSource(wpm=self.init_speed.get(), frequency=self.frequency, rise_time=self.rise_time)
         self.player.add_source(self.morse_sound)
-        def read_wav(file_path):
-            with wave.open(file_path, 'rb') as wf:
-                sample_rate = wf.getframerate()
-                n_channels = wf.getnchannels()
-                n_frames = wf.getnframes()
-                audio_data = wf.readframes(n_frames)
-                audio_segment = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
-                if n_channels == 2:
-                    audio_segment = audio_segment.reshape(-1, 2).mean(axis=1)
-            return audio_segment, sample_rate
 
-        audio_segment, sample_rate = read_wav('hfnoise.wav')
+        audio_segment, sample_rate = helpers.read_wav(os.path.join(data_path, 'qrn.wav'))
         noise_duration=float(len(audio_segment))/sample_rate
-        self.file_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=sample_rate, 
-                                       duration=noise_duration, initial_volume=1.0)
-        noise_duration = 10  # Duration for the pre-generated noise segment
-        white_noise = np.random.normal(0, 0.5, int(sample_rate * noise_duration))
-        self.white_noise_source = NoiseSoundSource(audio_segment=white_noise, duration=noise_duration, sample_rate=sample_rate, initial_volume=0.5)
-        self.player.add_source(self.file_source)  # Continuous background noise
+        self.qrn_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=sample_rate, 
+                                       duration=noise_duration, initial_volume=self.qrn)
+        self.player.add_source(self.qrn_source)  # qrn.wav
+        white_noise = np.random.normal(0, 1.0, int(sample_rate * noise_duration))
+        white_noise = helpers.band_pass_filter(white_noise, sampling_rate=sample_rate)
+        self.white_noise_source = NoiseSoundSource(audio_segment=white_noise, duration=noise_duration, sample_rate=sample_rate, initial_volume=self.noise)
+        self.player.add_source(self.white_noise_source)
         
         self.start_enabled = True
         self.speed_increase = True
@@ -67,11 +59,13 @@ class MorseTrainerUI:
             self.volume = settings.get('volume', 50)
             self.softness = settings.get('softness', 33)
             self.noise = settings.get('noise', 33)
-            self.ui_width = settings.get('ui_width',800)
-            self.ui_height =settings.get('ui_height', 400)
+            self.ui_width = settings.get('ui_width',900)
+            self.ui_height =settings.get('ui_height', 600)
             self.pre_msg_chk = tk.BooleanVar(value=settings.get('pre_msg', False))
             self.tone = settings.get('tone', 50)
             self.generate_ser_num = tk.BooleanVar(value=settings.get('ser_num', False))
+            self.qrn = settings.get('qrn', 0)
+            self.qrm = settings.get('qrm', 0)
 
 
     def save_settings(self):
@@ -82,14 +76,15 @@ class MorseTrainerUI:
             settings['file_path'] = self.file_path_var.get()
             settings['volume'] = self.volume
             settings['softness'] = self.softness
-            settings['noise'] = self.noise
+            settings['noise'] = self.white_noise_source.volume
             settings['ui_width'] = self.ui_width
             settings['ui_height'] = self.ui_height
             settings['pre_msg'] = self.pre_msg_chk.get()
             settings['tone'] = self.tone
             settings['ser_num'] = self.generate_ser_num.get()
-
-
+            settings['qrm'] = self.white_noise_source.volume
+            settings['qrn'] = self.qrn_source.volume
+            
     def create_start_screen(self):
         for widget in self.root.winfo_children():
             widget.destroy()
@@ -167,19 +162,21 @@ class MorseTrainerUI:
         self.tone_slider.grid(row=1, column=tone_col, padx=5, pady=5)
 
         ttk.Label(sound_frame, text="Noise").grid(row=0, column=noise_col, padx=5, pady=5)
-        self.noise_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_noise)
-        self.noise_slider.set(self.noise)
+        self.noise_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL)
+        self.noise_slider.bind("<ButtonRelease-1>", lambda s: helpers.slider2obj(self.noise_slider, self.white_noise_source))
+        self.noise_slider.set(helpers.volume2value(self.white_noise_source._volume))
         self.noise_slider.grid(row=1, column=noise_col, padx=5, pady=5)
 
         ttk.Label(sound_frame, text="QRN").grid(row=0, column=qrn_col, padx=5, pady=5)
-        self.noise_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_noise)
-        self.noise_slider.set(self.noise)
-        self.noise_slider.grid(row=1, column=qrn_col, padx=5, pady=5)
+        self.qrn_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL)
+        self.qrn_slider.bind("<ButtonRelease-1>", lambda s: helpers.slider2obj(self.qrn_slider, self.qrn_source))
+        self.qrn_slider.set(helpers.volume2value(self.qrn_source._volume))
+        self.qrn_slider.grid(row=1, column=qrn_col, padx=5, pady=5)
 
         ttk.Label(sound_frame, text="QRM").grid(row=0, column=qrm_col, padx=5, pady=5)
-        self.noise_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_noise)
-        self.noise_slider.set(self.noise)
-        self.noise_slider.grid(row=1, column=qrm_col, padx=5, pady=5)
+        self.qrm_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL)
+        self.qrm_slider.set(self.qrm)
+        self.qrm_slider.grid(row=1, column=qrm_col, padx=5, pady=5)
 
         # # Add checkboxes to the sound_frame
         checkbox2 = ttk.Checkbutton(sound_frame, text="SerNumber", variable=self.generate_ser_num)
@@ -264,12 +261,6 @@ class MorseTrainerUI:
     def frequency(self):
         return int(500 + (1.0 - float(self.tone)/100) * 350) # 500-850 hz
     
-    def update_noise(self, event):
-        self.noise = self.noise_slider.get()
-        volume = max(0, 1.0 - float(self.noise)/100.0)
-        self.file_source.set_volume(volume)
-        self.white_noise_source.set_volume(volume)
-
     def create_session_results_screen(self):
         if self.current_session is None:
             messagebox.showerror("Error", "No current session available")
@@ -488,6 +479,15 @@ def compare(sent_word, received_word, shortcuts):
 
 
 # Create main application window
+import sys
+
+# detect running mode and set path appropriatly
+if getattr(sys, 'frozen', False): # application package
+    # Running in a bundle
+    base_path = sys._MEIPASS
+else: # python
+    base_path = os.path.abspath(".")
+
 root = tk.Tk()
-app = MorseTrainerUI(root, compare)
+app = MorseTrainerUI(root, compare, data_path = base_path)
 root.mainloop()

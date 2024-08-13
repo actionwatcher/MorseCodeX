@@ -17,20 +17,25 @@ class NoiseSoundSource:
         self.generator = generator
         self.duration = duration
         self.sample_rate = sample_rate
-        self.volume = initial_volume
+        self._volume = initial_volume
         self.active = True
         self.source_audio_segment__ = audio_segment
         self.current_position = 0
         if self.generator is not None:
             self.source_audio_segment__ = self.generator(self.duration, self.sample_rate)
-        self.source_audio_segment = self.source_audio_segment__ * self.volume
+        self.source_audio_segment = self.source_audio_segment__ * self._volume
         self.source_segment_length = len(self.source_audio_segment__)
-        
-    def set_volume(self, volume):
-        if volume == self.volume:
+
+    @property
+    def volume(self):
+        return self._volume
+
+    @volume.setter
+    def volume(self, in_volume):
+        if in_volume == self._volume:
             return
-        self.volume = volume
-        self.source_audio_segment = self.source_audio_segment__ * self.volume
+        self._volume = in_volume
+        self.source_audio_segment = self.source_audio_segment__ * self._volume
 
     def get_audio_segment(self, duration):
         if not self.active:
