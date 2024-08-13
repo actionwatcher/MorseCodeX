@@ -144,14 +144,13 @@ class MorseTrainerUI:
         sound_frame = ttk.LabelFrame(main_frame, text="Sound")
         sound_frame.grid(row=row, column=col, rowspan=rowspan, padx=10, pady=5, sticky="ns")
         volume_col, softness_col, tone_col,noise_col,qrn_col,qrm_col = range(6)
-        chk_box_col = 5
-
+        
         ttk.Label(sound_frame, text="Volume").grid(row=0, column=volume_col, padx=5, pady=5)
         self.volume_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_volume)
         self.volume_slider.set(self.volume)
         self.volume_slider.grid(row=1, column=volume_col, padx=5, pady=5)
 
-        ttk.Label(sound_frame, text="Softness").grid(row=0, column=softness_col, padx=5, pady=5)
+        ttk.Label(sound_frame, text="Soft").grid(row=0, column=softness_col, padx=5, pady=5)
         self.softness_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL, command=self.update_softness)
         self.softness_slider.set(self.softness)
         self.softness_slider.grid(row=1, column=softness_col, padx=5, pady=5)
@@ -179,15 +178,18 @@ class MorseTrainerUI:
         self.qrm_slider.grid(row=1, column=qrm_col, padx=5, pady=5)
 
         # # Add checkboxes to the sound_frame
-        checkbox2 = ttk.Checkbutton(sound_frame, text="SerNumber", variable=self.generate_ser_num)
-        checkbox2.grid(row=4, column=1, sticky=tk.W, padx=5, pady=5)
+        chk_frame = ttk.LabelFrame(sound_frame, text="Message options")
+        #chk_frame = ttk.Frame(sound_frame)
+        chk_frame.grid(row=2, column=0, rowspan=1, columnspan=6, padx=10, pady=5, sticky="we")
+        checkbox2 = ttk.Checkbutton(chk_frame, text="SerNumber", variable=self.generate_ser_num)
+        checkbox2.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
         
-        checkbox1 = ttk.Checkbutton(sound_frame, text="Pre message", variable=self.pre_msg_chk)
-        checkbox1.grid(row=4, column=0, sticky=tk.W, padx=5, pady=5)
+        checkbox1 = ttk.Checkbutton(chk_frame, text="Pre message", variable=self.pre_msg_chk)
+        checkbox1.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
 
         if test_button:
             self.test_sound_button = Button(sound_frame, text="Test Sound", command=self.play_volume_test)
-            self.test_sound_button.grid(row=2, column=0, columnspan=2, pady=5)
+            self.test_sound_button.grid(row=6, column=0, pady=5, columnspan=6, sticky=tk.W + tk.E)
 
     def create_main_screen(self):
         for widget in self.root.winfo_children():
