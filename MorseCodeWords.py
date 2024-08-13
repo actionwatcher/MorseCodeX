@@ -236,8 +236,9 @@ class MorseTrainerUI:
         self.create_sound_frame(main_frame, row=0, col=1, rowspan=4)
         
 
-        self.quit_button = Button(main_frame, text="Quit", command=self.quit_app)
-        self.quit_button.grid(row=4, column=0, padx=5, pady=5)
+        stop_button = Button(main_frame, text="Stop", command=self.create_session_results_screen)
+        stop_button.grid(row=4, column=0, padx=5, pady=5)
+        
         self.root.bind("<F7>", lambda event: self.play_word(delay=1, replay=True))
 
         self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()), 
@@ -267,7 +268,7 @@ class MorseTrainerUI:
         if self.current_session is None:
             messagebox.showerror("Error", "No current session available")
             return
-
+        self.player.stop()
         for widget in self.root.winfo_children():
             widget.destroy()
         self.session_db.add_session(self.current_session)
