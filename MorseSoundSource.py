@@ -15,11 +15,11 @@ class MorseSoundSource:
         '(': '-.--.', ')': '-.--.-', '=': '-...-', 'AR': '.-.-.', 'BT': '-...-', 'SK': '...-.-'
     }
 
-    def __init__(self, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1):
+    def __init__(self, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5):
         self.sample_rate = sample_rate  # Standard audio sample rate in Hz
         self.frequency = frequency
         self.rise_time = rise_time  # Default rise time
-        self.volume = 0.5
+        self._volume = volume
         self.set_speed(wpm)
         self.signals =[]
         self.data_queue = queue.Queue()
@@ -42,13 +42,17 @@ class MorseSoundSource:
         # Regenerate the arrays with the new frequency
         self._generate_arrays()
 
-    def set_volume(self, volume):
-        self.volume = volume
+    @property
+    def volume(self):
+        return self._volume
+
+    @volume.setter
+    def volume(self, in_volume):
+        if in_volume == self._volume:
+            return
+        self._volume = in_volume
         # Regenerate the arrays with the new volume
         self._generate_arrays()
-
-    def get_volume(self):
-        return self.volume
 
     def set_rise(self, rise_time):
         self.rise_time = rise_time
@@ -82,8 +86,8 @@ class MorseSoundSource:
             window_dah[-rise_samples:] = 0.5 * (1 - np.cos(np.pi * np.arange(rise_samples, 0, -1) / rise_samples))
             dah_wave *= window_dah
 
-        self.dit_array = self.volume * dit_wave
-        self.dah_array = self.volume * dah_wave
+        self.dit_array = self._volume * dit_wave
+        self.dah_array = self._volume * dah_wave
         
         # Generate silence arrays for gaps
         self.element_gap_array = np.zeros(int(self.element_gap * self.sample_rate))
