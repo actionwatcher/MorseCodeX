@@ -41,7 +41,7 @@ def volume2value(volume):
     ''' Tk sliders value that goes from top to bottom '''
     return int(max(0, (1.0 - volume) * 100))
 
-def slider2obj(slider, obj):
+def slider2source(slider, obj):
     slider_value = slider.get()
     obj.volume = max(0, 1.0 - float(slider_value)/100.0)
 
