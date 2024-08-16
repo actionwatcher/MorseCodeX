@@ -70,6 +70,8 @@ class MorseTrainerUI:
             self.generate_ser_num = tk.BooleanVar(value=settings.get('ser_num', False))
             self.qrn_volume = settings.get('qrn_volume', 0)
             self.qrm_volume = settings.get('qrm_volume', 0)
+            self.sort_by = settings.get('sort_by', 'score')
+            self.sort_inverted = settings.get('sort_inverted', False)
 
 
     def save_settings(self):
@@ -88,6 +90,8 @@ class MorseTrainerUI:
             settings['ser_num'] = self.generate_ser_num.get()
             settings['qrm_volume'] = self.qrm_source.volume
             settings['qrn_volume'] = self.qrn_source.volume
+            settings['sort_by'] = self.sort_by
+            settings['sort_inverted'] = self.sort_inverted
             
     def create_start_screen(self):
         for widget in self.root.winfo_children():
@@ -302,8 +306,17 @@ class MorseTrainerUI:
         self.session_frame.pack(fill=tk.BOTH, expand=True)
 
         self.tree = ttk.Treeview(self.session_frame, columns=('score', 'date'), show='headings')
-        self.tree.heading('score', text='Score')
-        self.tree.heading('date', text='Date')
+        def create_handler(sort_by):
+            def handler():
+                if self.sort_by == sort_by:
+                    self.sort_inverted = not self.sort_inverted
+                else:
+                    self.sort_by = sort_by
+                    self.sort_inverted = False
+                self.populate_tree(self.sort_by)
+            return handler
+        self.tree.heading('score', text='Score', command=create_handler('score'))
+        self.tree.heading('date', text='Date', command=create_handler('date'))
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         scrollbar = ttk.Scrollbar(self.session_frame, orient=tk.VERTICAL, command=self.tree.yview)
@@ -312,7 +325,7 @@ class MorseTrainerUI:
 
         self.tree.bind('<ButtonRelease-1>', self.on_click)
         self.tree.bind('<ButtonRelease-2>', self.show_context_menu)
-        self.populate_tree()
+        self.populate_tree(self.sort_by)
 
         self.create_details_frame()
 
@@ -362,29 +375,30 @@ class MorseTrainerUI:
             self.context_menu.post(event.x_root, event.y_root)
 
     def confirm_delete(self):
-        selected_item = self.tree.selection()
-        if selected_item:
-            session_date = self.tree.item(selected_item, 'values')[1]
-            confirm = messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete session {session_date}?")
-            if confirm:
-                self.delete_session(session_date)
+        confirmed = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete selected session(s)?")
+        if not confirmed:
+            return
+        selected_items = self.tree.selection()
+        for item in selected_items:
+            session_date = self.tree.item(item, 'values')[1]
+            self.session_db.delete_session(session_date)
+        self.populate_tree(self.sort_by)
 
-    def delete_session(self, session_date):
-        self.session_db.delete_session(session_date)
-        self.populate_tree()
-
-    def populate_tree(self):
+    def populate_tree(self, sort_by):
         for item in self.tree.get_children():
             self.tree.delete(item)
-        sessions = self.session_db.get_sorted_sessions(sort_by='score', ascending=False)
+        sessions = self.session_db.get_sorted_sessions(sort_by=sort_by, ascending=self.sort_inverted)
         for session in sessions:
             self.tree.insert('', tk.END, values=(session.score, session.date))
 
     def on_click(self, event):
-        item = self.tree.focus()
-        session_date = self.tree.item(item, 'values')[1]
-        self.selected_session = self.session_db.get_session(session_date)
-        self.display_session()
+        try:
+            item = self.tree.focus()
+            session_date = self.tree.item(item, 'values')[1]
+            self.selected_session = self.session_db.get_session(session_date)
+            self.display_session()
+        except IndexError:
+            pass # ignore heading click
 
     def display_session(self):
         self.pair_tree.tag_configure('incorrect', foreground="red")
