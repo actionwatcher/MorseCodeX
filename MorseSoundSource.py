@@ -15,7 +15,7 @@ class MorseSoundSource:
         '(': '-.--.', ')': '-.--.-', '=': '-...-', 'AR': '.-.-.', 'BT': '-...-', 'SK': '...-.-'
     }
 
-    def __init__(self, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5):
+    def __init__(self, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5, queue_sz = None):
         self.sample_rate = sample_rate  # Standard audio sample rate in Hz
         self.frequency = frequency
         self.rise_time = rise_time  # Default rise time
@@ -23,7 +23,12 @@ class MorseSoundSource:
         self.set_speed(wpm)
         self.signals =[]
         self.data_queue = queue.Queue()
+        if queue_sz:
+            self.data_queue.maxsize = queue_sz
 
+    def reset(self):
+        while(not self.data_queue.empty()):
+            self.data_queue.get()
     
     def set_speed(self, wpm, slowdown=0):
         # Calculate durations based on WPM

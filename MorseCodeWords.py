@@ -35,7 +35,10 @@ class MorseTrainerUI:
         self.player = Mixer()
         self.morse_source = MorseSoundSource(wpm=self.init_speed.get(), frequency=self.frequency, rise_time=self.rise_time, volume=self.cw_volume)
         self.player.add_source(self.morse_source)
-
+        qrm_freq = np.random.choice([*range(100, 360, 20), *range(900, 1060, 20)])
+        self.qrm_source = MorseSoundSource(wpm=35, frequency=qrm_freq, rise_time=self.rise_time, volume=self.qrm_volume, queue_sz=1)
+        self.player.add_source(self.qrm_source)
+        
         audio_segment, sample_rate = helpers.read_wav(os.path.join(data_path, 'qrn.wav'))
         noise_duration=float(len(audio_segment))/sample_rate
         self.qrn_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=sample_rate, 
@@ -83,7 +86,7 @@ class MorseTrainerUI:
             settings['pre_msg'] = self.pre_msg_chk.get()
             settings['tone'] = self.tone
             settings['ser_num'] = self.generate_ser_num.get()
-            settings['qrm_volume'] = self.hfnoise_source.volume
+            settings['qrm_volume'] = self.qrm_source.volume
             settings['qrn_volume'] = self.qrn_source.volume
             
     def create_start_screen(self):
@@ -176,20 +179,21 @@ class MorseTrainerUI:
 
         ttk.Label(sound_frame, text="QRM").grid(row=0, column=qrm_col, padx=5, pady=5)
         qrm_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL)
-        qrm_slider.set(self.qrm_volume)
+        qrm_slider.bind("<ButtonRelease-1>", lambda s: helpers.slider2source(qrm_slider, self.qrm_source))
+        qrm_slider.set(helpers.volume2value(self.qrm_source.volume))
         qrm_slider.grid(row=1, column=qrm_col, padx=5, pady=5)
 
-        # # Add checkboxes to the sound_frame
-        chk_frame = ttk.LabelFrame(sound_frame, text="Message options")
-        #chk_frame = ttk.Frame(sound_frame)
-        chk_frame.grid(row=2, column=0, rowspan=1, columnspan=6, padx=10, pady=5, sticky="we")
-        checkbox2 = ttk.Checkbutton(chk_frame, text="SerNumber", variable=self.generate_ser_num)
-        checkbox2.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
-        
-        checkbox1 = ttk.Checkbutton(chk_frame, text="Pre message", variable=self.pre_msg_chk)
-        checkbox1.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
-
         if test_button:
+            # # Add checkboxes to the sound_frame
+            chk_frame = ttk.LabelFrame(sound_frame, text="Message options")
+            #chk_frame = ttk.Frame(sound_frame)
+            chk_frame.grid(row=2, column=0, rowspan=1, columnspan=6, padx=10, pady=5, sticky="we")
+            checkbox2 = ttk.Checkbutton(chk_frame, text="SerNumber", variable=self.generate_ser_num)
+            checkbox2.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
+            
+            checkbox1 = ttk.Checkbutton(chk_frame, text="Pre message", variable=self.pre_msg_chk)
+            checkbox1.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+
             test_sound_button = Button(sound_frame, text="Test Sound", command=self.play_volume_test)
             test_sound_button.grid(row=6, column=0, pady=5, columnspan=6, sticky=tk.W + tk.E)
 
@@ -235,7 +239,7 @@ class MorseTrainerUI:
         self.entry_field.bind("<Return>", self.process_entry)
         self.entry_field.focus_set()
 
-        self.create_sound_frame(main_frame, row=0, col=1, rowspan=4)
+        self.create_sound_frame(main_frame, row=0, col=1, rowspan=3)
         
 
         stop_button = Button(main_frame, text="Stop", command=self.create_session_results_screen)
@@ -248,6 +252,12 @@ class MorseTrainerUI:
         self.player.start()
         self.morse_source.play_string("vvv")
         self.play_word(3)
+        self.qrm_active = True
+        def t():
+            while(self.qrm_active):
+                self.qrm_source.play_string("cq test nu6n       ")
+        self.qrm_thread = threading.Timer(3, t)
+        self.qrm_thread.start()
   
 
     def update_softness(self, event):
@@ -270,6 +280,7 @@ class MorseTrainerUI:
         if self.current_session is None:
             messagebox.showerror("Error", "No current session available")
             return
+        self.stop_qrm()
         self.player.stop()
         for widget in self.root.winfo_children():
             widget.destroy()
@@ -397,6 +408,7 @@ class MorseTrainerUI:
         self.current_speed = (self.init_speed.get())
         self.morse_source.set_speed(float(self.current_speed))
         self.morse_source.play_string("Vvv")
+        self.qrm_source.play_string("QRN QRN")
         root.after(3000, self.on_sound_test_complete)
 
     def on_sound_test_complete(self):
@@ -444,12 +456,20 @@ class MorseTrainerUI:
         if replay == False:
             self.pre_msg, self.sent_word = self.data_source.get_next_word()
             if not self.sent_word:
+                self.stop_qrm()
                 self.player.stop()
                 self.create_session_results_screen()
                 return
         else: 
             self.speed_increase = False
         threading.Timer(delay, self.morse_source.play_string, args=[self.pre_msg+self.sent_word]).start()
+
+    def stop_qrm(self):
+        if self.qrm_thread:
+            self.qrm_active = False
+            self.qrm_thread.join()
+            self.qrm_source.reset()
+            self.qrm_thread = []
     
     def on_geometry_change(self, event):
         if event.width < 600 or event.height < 300:
@@ -460,6 +480,7 @@ class MorseTrainerUI:
 
 
     def quit_app(self):
+        self.stop_qrm()
         self.player.stop()
         self.save_settings()
         self.root.quit()
