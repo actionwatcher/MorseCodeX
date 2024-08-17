@@ -72,7 +72,6 @@ class MorseTrainerUI:
             self.qrm_volume = settings.get('qrm_volume', 0)
             self.sort_by = settings.get('sort_by', 'score')
             self.sort_inverted = settings.get('sort_inverted', False)
-            print(self.ui_width, self.ui_height)
 
 
     def save_settings(self):
@@ -86,7 +85,6 @@ class MorseTrainerUI:
             settings['hfnoise_volume'] = self.hfnoise_source.volume
             settings['ui_width'] = self.ui_width
             settings['ui_height'] = self.ui_height
-            print(self.ui_width, self.ui_height)
             settings['pre_msg'] = self.pre_msg_chk.get()
             settings['tone'] = self.tone
             settings['ser_num'] = self.generate_ser_num.get()
