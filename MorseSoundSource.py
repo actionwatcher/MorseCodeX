@@ -1,19 +1,23 @@
 import numpy as np
 import sounddevice as sd
 import queue
+import json
+
+def load_morse_table(filename):
+    try:
+        with open(filename, 'r') as file:
+            morse_code_dict = json.load(file)
+        return morse_code_dict
+    except FileNotFoundError:
+        print("File not found. Please check the file path.")
+        return {}
+    except json.JSONDecodeError:
+        print("Error decoding JSON. Please check the file content.")
+        return {}
+
 
 class MorseSoundSource:
-    MORSE_CODE_DICT = {
-        'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
-        'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
-        'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
-        'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
-        'Y': '-.--', 'Z': '--..',
-        '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....',
-        '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----',
-        ',': '--..--', '.': '.-.-.-', '?': '..--..', '/': '-..-.', '-': '-....-',
-        '(': '-.--.', ')': '-.--.-', '=': '-...-', 'AR': '.-.-.', 'BT': '-...-', 'SK': '...-.-'
-    }
+    MORSE_CODE_DICT = load_morse_table('morse_table.json')
 
     def __init__(self, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5, queue_sz = None):
         self.sample_rate = sample_rate  # Standard audio sample rate in Hz

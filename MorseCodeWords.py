@@ -29,7 +29,7 @@ class MorseTrainerUI:
         self.root.title("CW Training Machine")
         self.load_settings()
         self.root.geometry(f"{self.ui_width}x{self.ui_height}")
-        self.root.bind("<Configure>", self.on_geometry_change)
+        #self.root.bind("<Configure>", self.on_geometry_change)
         self.session_db = SessionDB()
         self.t = [0]
         self.player = Mixer()
@@ -63,8 +63,8 @@ class MorseTrainerUI:
             self.cw_volume = settings.get('cw_volume', 0.5)
             self.softness = settings.get('softness', 33)
             self.hfnoise_volume = settings.get('hfnoise_volume', 0.33)
-            self.ui_width = settings.get('ui_width',900)
-            self.ui_height =settings.get('ui_height', 600)
+            self.ui_width = settings.get('ui_width',808)
+            self.ui_height =settings.get('ui_height', 500)
             self.pre_msg_chk = tk.BooleanVar(value=settings.get('pre_msg', False))
             self.tone = settings.get('tone', 50)
             self.generate_ser_num = tk.BooleanVar(value=settings.get('ser_num', False))
@@ -72,6 +72,7 @@ class MorseTrainerUI:
             self.qrm_volume = settings.get('qrm_volume', 0)
             self.sort_by = settings.get('sort_by', 'score')
             self.sort_inverted = settings.get('sort_inverted', False)
+            print(self.ui_width, self.ui_height)
 
 
     def save_settings(self):
@@ -85,6 +86,7 @@ class MorseTrainerUI:
             settings['hfnoise_volume'] = self.hfnoise_source.volume
             settings['ui_width'] = self.ui_width
             settings['ui_height'] = self.ui_height
+            print(self.ui_width, self.ui_height)
             settings['pre_msg'] = self.pre_msg_chk.get()
             settings['tone'] = self.tone
             settings['ser_num'] = self.generate_ser_num.get()
@@ -286,6 +288,7 @@ class MorseTrainerUI:
             return
         self.stop_qrm()
         self.player.stop()
+        self.morse_source.reset()
         for widget in self.root.winfo_children():
             widget.destroy()
         self.session_db.add_session(self.current_session)
@@ -357,8 +360,8 @@ class MorseTrainerUI:
         self.pair_tree.heading('speed', text='Speed')
         self.pair_tree.heading('duration', text='Duration')
         w = max(20, int(self.ui_width*0.1))
-        self.pair_tree.column('speed', width=w)
-        self.pair_tree.column('duration', width=w)
+        # self.pair_tree.column('speed', width=w)
+        # self.pair_tree.column('duration', width=w)
         self.pair_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar = ttk.Scrollbar(self.detail_frame, orient=tk.VERTICAL, command=self.pair_tree.yview)
         self.pair_tree.configure(yscroll=scrollbar.set)
@@ -427,6 +430,7 @@ class MorseTrainerUI:
 
     def on_sound_test_complete(self):
         self.player.stop()
+        self.morse_source.reset()
         self.start_enabled = True
 
     def start_training(self):
@@ -472,6 +476,7 @@ class MorseTrainerUI:
             if not self.sent_word:
                 self.stop_qrm()
                 self.player.stop()
+                self.morse_source.reset()
                 self.create_session_results_screen()
                 return
         else: 
@@ -485,12 +490,12 @@ class MorseTrainerUI:
             self.qrm_source.reset()
             self.qrm_thread = []
     
-    def on_geometry_change(self, event):
-        if event.width < 600 or event.height < 300:
-            return
-        self.ui_width = event.width
-        self.ui_height = event.height
-        self.save_settings()
+    # def on_geometry_change(self, event):
+    #     if event.width < 600 or event.height < 300:
+    #         return
+    #     self.ui_width = event.width
+    #     self.ui_height = event.height
+    #     self.save_settings()
 
 
     def quit_app(self):
