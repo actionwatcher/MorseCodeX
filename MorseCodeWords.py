@@ -25,6 +25,7 @@ class MorseTrainerUI:
 
     def __init__(self, root, compare_function, data_path):
         self.root = root
+        self.data_path = data_path
         self.compare_function = compare_function
         self.root.title("CW Training Machine")
         self.load_settings()
@@ -33,10 +34,11 @@ class MorseTrainerUI:
         self.session_db = SessionDB()
         self.t = [0]
         self.player = Mixer()
-        self.morse_source = MorseSoundSource(wpm=self.init_speed.get(), frequency=self.frequency, rise_time=self.rise_time, volume=self.cw_volume)
+        morse_file = os.path.join(self.data_path, "morse_table.json")
+        self.morse_source = MorseSoundSource(morse_mapping_filename = morse_file, wpm=self.init_speed.get(), frequency=self.frequency, rise_time=self.rise_time, volume=self.cw_volume)
         self.player.add_source(self.morse_source)
         qrm_freq = np.random.choice([*range(100, 360, 20), *range(900, 1060, 20)])
-        self.qrm_source = MorseSoundSource(wpm=35, frequency=qrm_freq, rise_time=self.rise_time, volume=self.qrm_volume, queue_sz=1)
+        self.qrm_source = MorseSoundSource(morse_mapping_filename = morse_file, wpm=35, frequency=qrm_freq, rise_time=self.rise_time, volume=self.qrm_volume, queue_sz=1)
         self.player.add_source(self.qrm_source)
         
         audio_segment, sample_rate = helpers.read_wav(os.path.join(data_path, 'qrn.wav'))
@@ -59,7 +61,8 @@ class MorseTrainerUI:
             self.init_speed = tk.IntVar(value=settings.get('init_speed', 27))
             self.max_speed = tk.IntVar(value=settings.get('max_speed', 50))
             self.training_word_count = tk.IntVar(value=settings.get('word_count', 50))
-            self.file_path_var = tk.StringVar(value=settings.get('file_path', 'MASTER.SCP'))
+            self.data_source_file = tk.StringVar(value=settings.get('data_source_file', 'MASTER.SCP'))
+            self.data_source_dir = settings.get('data_source_dir', self.data_path)
             self.cw_volume = settings.get('cw_volume', 0.5)
             self.softness = settings.get('softness', 33)
             self.hfnoise_volume = settings.get('hfnoise_volume', 0.33)
@@ -79,7 +82,8 @@ class MorseTrainerUI:
             settings['init_speed'] = self.init_speed.get()
             settings['max_speed'] = self.max_speed.get()
             settings['word_count'] = self.training_word_count.get()
-            settings['file_path'] = self.file_path_var.get()
+            settings['data_source_file'] = self.data_source_file.get()
+            settings['data_source_dir'] = self.data_source_dir
             settings['cw_volume'] = self.morse_source.volume
             settings['softness'] = self.softness
             settings['hfnoise_volume'] = self.hfnoise_source.volume
@@ -105,9 +109,9 @@ class MorseTrainerUI:
         file_frame.grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
         ttk.Label(file_frame, text="Select File:").grid(row=0, column=0, padx=5, pady=5)
-        self.file_path_entry = ttk.Entry(file_frame, textvariable=self.file_path_var, width=40)
+        self.file_path_entry = ttk.Entry(file_frame, textvariable=self.data_source_file, width=40)
         self.file_path_entry.grid(row=0, column=1, padx=5, pady=5)
-        self.file_select_button = Button(file_frame, text="Browse", command=self.select_file)
+        self.file_select_button = Button(file_frame, text="Browse", command=self.select_source_file)
         self.file_select_button.grid(row=0, column=2, padx=5, pady=5)
 
         content_frame = ttk.Frame(start_frame)
@@ -139,14 +143,16 @@ class MorseTrainerUI:
         self.create_sound_frame(content_frame, row=0, col=1, test_button=True)
 
 
-    def select_file(self):
-        file_path = filedialog.askopenfilename(
+    def select_source_file(self):
+        selected_file = filedialog.askopenfilename(
             title="Select a file",
-            initialdir='.',
+            initialdir=self.data_source_dir,
             filetypes=(("Text files", "*.txt"), ("SCP", "*.scp"), ("All files", "*.*"))
         )
-        if file_path:
-            self.file_path_var.set(file_path)
+        if selected_file:
+            selected_dir, selected_file = os.path.split(selected_file)
+            self.data_source_file.set(selected_file)
+            self.data_source_dir = selected_dir
 
     def create_sound_frame(self, main_frame, row=0, col=1, rowspan=4, test_button=False):
         sound_frame = ttk.LabelFrame(main_frame, text="Sound")
@@ -251,7 +257,7 @@ class MorseTrainerUI:
         
         self.root.bind("<F7>", lambda event: self.play_word(delay=1, replay=True))
 
-        self.data_source = DataSource(file_path=self.file_path_var.get(), num_words=int(self.training_word_count.get()), 
+        self.data_source = DataSource(file_path=os.path.join(self.data_source_dir, self.data_source_file.get()), num_words=int(self.training_word_count.get()), 
                                       pre_message=self.pre_msg_chk.get(), serial=self.generate_ser_num.get())
         self.player.start()
         self.morse_source.play_string("vvv")
@@ -482,7 +488,7 @@ class MorseTrainerUI:
         threading.Timer(delay, self.morse_source.play_string, args=[self.pre_msg+self.sent_word]).start()
 
     def stop_qrm(self):
-        if self.qrm_thread:
+        if hasattr(self, 'qrm_thread') and self.qrm_thread:
             self.qrm_active = False
             self.qrm_thread.join()
             self.qrm_source.reset()
@@ -519,10 +525,10 @@ def compare(sent_word, received_word, shortcuts):
 # Create main application window
 import sys
 
-# detect running mode and set path appropriatly
+# detect running mode and set path accordingly
 if getattr(sys, 'frozen', False): # application package
     # Running in a bundle
-    base_path = sys._MEIPASS
+    base_path = os.path.join(sys._MEIPASS, 'conf')
 else: # python
     base_path = os.path.abspath(".")
 

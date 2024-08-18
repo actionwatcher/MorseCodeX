@@ -9,17 +9,16 @@ def load_morse_table(filename):
             morse_code_dict = json.load(file)
         return morse_code_dict
     except FileNotFoundError:
-        print("File not found. Please check the file path.")
+        print(f"Morse code mapping file <{filename}> not found.")
         return {}
     except json.JSONDecodeError:
-        print("Error decoding JSON. Please check the file content.")
+        print(f"JSON error decoding morse mapping file <{filename}>.")
         return {}
 
 
 class MorseSoundSource:
-    MORSE_CODE_DICT = load_morse_table('morse_table.json')
-
-    def __init__(self, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5, queue_sz = None):
+    def __init__(self, morse_mapping_filename, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5, queue_sz = None):
+        self.MORSE_CODE_DICT = load_morse_table(morse_mapping_filename)
         self.sample_rate = sample_rate  # Standard audio sample rate in Hz
         self.frequency = frequency
         self.rise_time = rise_time  # Default rise time
