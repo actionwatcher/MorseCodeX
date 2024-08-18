@@ -31,7 +31,7 @@ class MorseTrainerUI:
         self.load_settings()
         self.root.geometry(f"{self.ui_width}x{self.ui_height}")
         #self.root.bind("<Configure>", self.on_geometry_change)
-        self.session_db = SessionDB()
+        self.session_db = SessionDB(os.path.join(self.data_path, 'sessions.db'))
         self.t = [0]
         self.player = Mixer()
         morse_file = os.path.join(self.data_path, "morse_table.json")
@@ -57,7 +57,7 @@ class MorseTrainerUI:
         self.create_start_screen()
 
     def load_settings(self):
-        with shelve.open('settings') as settings:
+        with shelve.open(os.path.join(self.data_path,'settings')) as settings:
             self.init_speed = tk.IntVar(value=settings.get('init_speed', 27))
             self.max_speed = tk.IntVar(value=settings.get('max_speed', 50))
             self.training_word_count = tk.IntVar(value=settings.get('word_count', 50))
@@ -78,7 +78,7 @@ class MorseTrainerUI:
 
 
     def save_settings(self):
-        with shelve.open('settings') as settings:
+        with shelve.open(os.path.join(self.data_path,'settings')) as settings:
             settings['init_speed'] = self.init_speed.get()
             settings['max_speed'] = self.max_speed.get()
             settings['word_count'] = self.training_word_count.get()
