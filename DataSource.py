@@ -7,7 +7,7 @@ class DataSource:
         self.pre_msgs_selection = []
         self.pre_msgs = []
         if pre_message:
-            self.pre_msgs_selection = ('tu ,'*20+','*8+'r ,'*4+'qsl ,'+'ur ,'+'5nn ').split(',')
+            self.pre_msgs_selection = ('tu ,'*20+','*8+'r ,'*4+'qsl ,'+'ur ,'*3).split(',')
         self.generate_sernum = serial
         self.msgs = self._load_words(file_path)
         self.reset()
