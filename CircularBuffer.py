@@ -37,11 +37,12 @@ class CircularBuffer:
 
     def get(self, array_size):
         with self.not_empty:
-            if self.count == 0:
-                self.not_empty.wait()
-
-            actual_size = min(array_size, self.count)
+            success = self.not_empty.wait_for(lambda : self.count, timeout=0.01)
             data = np.zeros(array_size, dtype=self.buffer.dtype) #fill with zerros
+            if not success:
+                return data
+            
+            actual_size = min(array_size, self.count)
             start_index = self.start
 
             if start_index + actual_size <= self.size:

@@ -435,6 +435,7 @@ class MorseTrainerUI:
     def on_sound_test_complete(self):
         self.player.stop()
         self.morse_source.reset()
+        self.qrm_source.reset()
         self.start_enabled = True
 
     def start_training(self):
@@ -494,14 +495,6 @@ class MorseTrainerUI:
             self.qrm_source.reset()
             self.qrm_thread = []
     
-    # def on_geometry_change(self, event):
-    #     if event.width < 600 or event.height < 300:
-    #         return
-    #     self.ui_width = event.width
-    #     self.ui_height = event.height
-    #     self.save_settings()
-
-
     def quit_app(self):
         self.stop_qrm()
         self.player.stop()
@@ -510,7 +503,6 @@ class MorseTrainerUI:
 
 
 def compare(sent_word, received_word, shortcuts):
-    #if shortcuts = {'T':'0', 'A':'1', 'N':'9'}
     # Compare characters in lowercase
     correctness_mask = [((s == r) or ((s in shortcuts) and r == shortcuts[s])) for s, r in zip(sent_word, received_word)]
     score = sum(correctness_mask)
