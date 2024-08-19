@@ -61,11 +61,11 @@ class MorseSoundSource:
     def volume(self, in_volume):
         if in_volume == self._volume:
             return
-        if in_volume <= 0.01:
+        self._volume = in_volume
+        if self._volume <= 0.01:
             self.deactivate()
             return
         self.activate()
-        self._volume = in_volume
         # Regenerate the arrays with the new volume
         self._generate_arrays()
 

@@ -262,13 +262,9 @@ class MorseTrainerUI:
         self.player.start()
         self.morse_source.play_string("vvv")
         self.play_word(3)
-        self.qrm_active = True
         def t():
-            while(self.qrm_active):
-                if self.qrm_source.active:
-                    self.qrm_source.play_string("cq test nu6n       ")
-                else: #slow down inactive source
-                    time.sleep(0.3)
+            while(self.qrm_source.active):
+                self.qrm_source.play_string("cq test nu6n       ")
         self.qrm_thread = threading.Timer(3, t)
         self.qrm_thread.start()
   
@@ -493,9 +489,8 @@ class MorseTrainerUI:
 
     def stop_qrm(self):
         if hasattr(self, 'qrm_thread') and self.qrm_thread:
-            self.qrm_active = False
+            self.qrm_source.deactivate()
             self.qrm_thread.join()
-            self.qrm_source.reset()
             self.qrm_thread = []
     
     def quit_app(self):
