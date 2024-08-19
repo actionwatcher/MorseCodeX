@@ -17,7 +17,7 @@ from MorseSoundSource import MorseSoundSource
 from DataSource import DataSource
 import numpy as np
 import helpers
-#import time
+import time
     
 
 class MorseTrainerUI:
@@ -33,7 +33,8 @@ class MorseTrainerUI:
         #self.root.bind("<Configure>", self.on_geometry_change)
         self.session_db = SessionDB(os.path.join(self.data_path, 'sessions.db'))
         self.t = [0]
-        self.player = Mixer()
+        audio_segment, sample_rate = helpers.read_wav(os.path.join(data_path, 'qrn.wav')) # this file will govern sample rate
+        self.player = Mixer(sample_rate=sample_rate)
         morse_file = os.path.join(self.data_path, "morse_table.json")
         self.morse_source = MorseSoundSource(morse_mapping_filename = morse_file, wpm=self.init_speed.get(), frequency=self.frequency, rise_time=self.rise_time, volume=self.cw_volume)
         self.player.add_source(self.morse_source)
@@ -41,7 +42,6 @@ class MorseTrainerUI:
         self.qrm_source = MorseSoundSource(morse_mapping_filename = morse_file, wpm=35, frequency=qrm_freq, rise_time=self.rise_time, volume=self.qrm_volume, queue_sz=1)
         self.player.add_source(self.qrm_source)
         
-        audio_segment, sample_rate = helpers.read_wav(os.path.join(data_path, 'qrn.wav'))
         noise_duration=float(len(audio_segment))/sample_rate
         self.qrn_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=sample_rate, 
                                        duration=noise_duration, initial_volume=self.qrn_volume)
@@ -265,7 +265,10 @@ class MorseTrainerUI:
         self.qrm_active = True
         def t():
             while(self.qrm_active):
-                self.qrm_source.play_string("cq test nu6n       ")
+                if self.qrm_source.active:
+                    self.qrm_source.play_string("cq test nu6n       ")
+                else: #slow down inactive source
+                    time.sleep(0.3)
         self.qrm_thread = threading.Timer(3, t)
         self.qrm_thread.start()
   

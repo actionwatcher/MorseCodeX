@@ -23,11 +23,14 @@ class MorseSoundSource:
         self.frequency = frequency
         self.rise_time = rise_time  # Default rise time
         self._volume = volume
+        self.active = True
         self.set_speed(wpm)
         self.signals =[]
         self.data_queue = queue.Queue()
         if queue_sz:
             self.data_queue.maxsize = queue_sz
+        if self.volume <= 0.01:
+            self.deactivate()
 
     def reset(self):
         while(not self.data_queue.empty()):
@@ -58,6 +61,10 @@ class MorseSoundSource:
     def volume(self, in_volume):
         if in_volume == self._volume:
             return
+        if in_volume <= 0.01:
+            self.deactivate()
+            return
+        self.activate()
         self._volume = in_volume
         # Regenerate the arrays with the new volume
         self._generate_arrays()
@@ -127,6 +134,8 @@ class MorseSoundSource:
         }
 
     def play_string(self, message):
+        if not self.active:
+            return
         morse_code_list = self._convert_to_morse(message)
         if morse_code_list:
             signal = self._generate_signal(morse_code_list)
@@ -189,3 +198,10 @@ class MorseSoundSource:
         if len(signal) == 0:
             return np.array([])  # Return an empty array if no valid Morse code is generated
         return np.concatenate([np.array(signal)])  # Ensure signal is a list of arrays
+
+    def deactivate(self):
+        self.active = False
+        self.reset()
+
+    def activate(self):
+        self.active = True
