@@ -19,6 +19,7 @@ def load_morse_table(filename):
 class MorseSoundSource:
     def __init__(self, morse_mapping_filename, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5, queue_sz = None):
         self.MORSE_CODE_DICT = load_morse_table(morse_mapping_filename)
+        self.signal_dict={}
         self.sample_rate = sample_rate  # Standard audio sample rate in Hz
         self.frequency = frequency
         self.rise_time = rise_time  # Default rise time
@@ -108,6 +109,7 @@ class MorseSoundSource:
         self.element_gap_array = np.zeros(int(self.element_gap * self.sample_rate))
         self.symbol_gap_array = np.zeros(int(self.symbol_gap * self.sample_rate))
         self.word_gap_array = np.zeros(int(self.word_gap * self.sample_rate))
+        self._build_signal_dict()
     
     def get_speed(self):
         return self.wpm
@@ -136,10 +138,8 @@ class MorseSoundSource:
     def play_string(self, message):
         if not self.active:
             return
-        morse_code_list = self._convert_to_morse(message)
-        if morse_code_list:
-            signal = self._generate_signal(morse_code_list)
-            self.data_queue.put(signal)
+        signal = self._convert_to_signal(message.upper())
+        self.data_queue.put(signal)
     
     def get_audio_segment(self, duration):
         size = int(self.sample_rate * duration)
@@ -160,44 +160,23 @@ class MorseSoundSource:
 
         return result
 
-
-    def _convert_to_morse(self, message):
-        morse_code = []
-        i = 0
-        while i < len(message):
-            if message[i] == '<':  # Detect start of a prosign
-                end = message.find('>', i)
-                if end != -1:
-                    prosign = message[i+1:end]
-                    if prosign in self.MORSE_CODE_DICT:
-                        morse_code.append(self.MORSE_CODE_DICT[prosign])
-                    i = end
-            elif message[i] == ' ':
-                morse_code.append(' ')
-            else:
-                char = message[i].upper()
-                if char in self.MORSE_CODE_DICT:
-                    morse_code.append(self.MORSE_CODE_DICT[char])
-            i += 1
-        return morse_code  # Return list of Morse code strings
-    
     def _generate_signal(self, morse_code_list):
-        signal = []
+        signal = np.array([])
         for symbol in morse_code_list:
             if symbol == ' ':
-                signal.extend(self.word_gap_array)
+                signal = np.concatenate([signal, self.word_gap_array])
             else:
                 for i, element in enumerate(symbol):
                     if element == '.':
-                        signal.extend(self.dit_array)
+                        signal = np.concatenate([signal, self.dit_array])
                     elif element == '-':
-                        signal.extend(self.dah_array)
+                        signal = np.concatenate([signal, self.dah_array])
                     if i < len(symbol) - 1:  # Add element gap if not the last element
-                        signal.extend(self.element_gap_array)
-                signal.extend(self.symbol_gap_array)
+                        signal = np.concatenate([signal, self.element_gap_array])
+                signal = np.concatenate([signal, self.symbol_gap_array])
         if len(signal) == 0:
             return np.array([])  # Return an empty array if no valid Morse code is generated
-        return np.concatenate([np.array(signal)])  # Ensure signal is a list of arrays
+        return signal  # Ensure signal is a list of arrays
 
     def deactivate(self):
         self.active = False
@@ -205,3 +184,27 @@ class MorseSoundSource:
 
     def activate(self):
         self.active = True
+
+#Optimization
+    def _build_signal_dict(self):
+        for char, code in self.MORSE_CODE_DICT.items():
+            self.signal_dict[char] = self._generate_signal([code])
+
+    def _convert_to_signal(self, message):
+        signal = np.array([])
+        i = 0
+        while i < len(message):
+            if message[i] == '<':  # Detect start of a prosign
+                end = message.find('>', i)
+                if end != -1:
+                    prosign = message[i+1:end]
+                    if prosign in self.MORSE_CODE_DICT:
+                        signal = np.concatenate([signal, self.signal_dict[prosign]])
+                    i = end
+            elif message[i] == ' ':
+                signal = np.concatenate([signal, self.word_gap_array])
+            else:
+                char = message[i]
+                signal = np.concatenate([signal, self.signal_dict[char]])
+            i += 1
+        return signal  # Return list of Morse code strings
