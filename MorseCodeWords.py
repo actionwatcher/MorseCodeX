@@ -264,11 +264,11 @@ class MorseTrainerUI:
         self.morse_source.play_string("vvv")
         self.play_word(3)
         self.run_qrm_thread = True # yes, always start. when qrm_source is inactive play_string does nothing, thus thread will be mostly idle(for now)
-        def t():
+        def qrm_sender():
             while(self.run_qrm_thread):
                 self.qrm_source.play_string("cq test nu6n")
                 time.sleep(6)
-        self.qrm_thread = threading.Timer(3, t)
+        self.qrm_thread = threading.Timer(3, qrm_sender)
         self.qrm_thread.start()
   
 
