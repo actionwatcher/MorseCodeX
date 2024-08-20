@@ -32,9 +32,6 @@ class DataSource:
                     if line_number == 0 and line.startswith('!!Order!!'):
                         format_spec = [field.strip() for field in line.split('!!Order!!')[1].split(',') if field.strip()]
                     elif line and not line.startswith('#'):
-                        if self.pre_msgs_selection:
-                            pre_msg = random.choice(self.pre_msgs_selection)
-                        self.pre_msgs.append(pre_msg)
                         if format_spec:
                             fields = line.split(',')
                             if len(fields) < len(format_spec):
@@ -67,6 +64,11 @@ class DataSource:
             self.selected_msgs = random.sample(self.msgs, k=self.num_words)
         else:
             self.selected_msgs = random.choices(self.msgs, k=self.num_words)
+        
+        if self.pre_msgs_selection:
+            self.pre_msgs = random.choices(self.pre_msgs_selection, k=self.num_words)
+        else:
+            self.pre_msgs = ['' for _ in range(self.num_words)]
         self.index = 0
 
     def get_next_word(self):
