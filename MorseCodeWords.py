@@ -430,9 +430,10 @@ class MorseTrainerUI:
         self.player.start()
         self.current_speed = (self.init_speed.get())
         self.morse_source.set_speed(float(self.current_speed))
-        self.morse_source.play_string("Vvv")
-        self.qrm_source.play_string("QRN QRN")
-        root.after(3000, self.on_sound_test_complete)
+        t_morse = self.morse_source.play_string("Vvv")
+        t_qrn = self.qrm_source.play_string("QRN QRN")
+        print(t_morse, t_qrn)
+        root.after(round(1000 * max(t_morse, t_qrn) + 0.5), self.on_sound_test_complete)
 
     def on_sound_test_complete(self):
         self.player.stop()

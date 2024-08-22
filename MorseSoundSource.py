@@ -39,12 +39,14 @@ class MorseSoundSource:
     
     def set_speed(self, wpm, slowdown=0):
         # Calculate durations based on WPM
-        self.dit_duration = 1.2 / wpm
+        if hasattr(self, 'wpm') and self.wpm == wpm:
+            return
+        self.wpm = wpm
+        self.dit_duration = 1.2 / self.wpm
         self.dah_duration = 3 * self.dit_duration
         self.element_gap = self.dit_duration
         self.symbol_gap = self.dah_duration + slowdown * self.dit_duration
         self.word_gap = 7 * self.dit_duration
-        self.wpm = wpm
         
         # Generate the arrays with the current frequency and volume
         self._generate_arrays()
@@ -137,9 +139,10 @@ class MorseSoundSource:
 
     def play_string(self, message):
         if not self.active:
-            return
+            return 0
         signal = self._convert_to_signal(message.upper())
         self.data_queue.put(signal)
+        return float(len(signal))/self.sample_rate
     
     def get_audio_segment(self, duration):
         size = int(self.sample_rate * duration)
