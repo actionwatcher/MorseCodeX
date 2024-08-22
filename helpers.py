@@ -1,5 +1,6 @@
 import wave
 import numpy as np
+import math
 
 def read_wav(file_path):
     with wave.open(file_path, 'rb') as wf:
@@ -39,11 +40,18 @@ def write_wav(file_path, audio_segment, sample_rate):
 
 def volume2value(volume):
     ''' Tk sliders value that goes from top to bottom '''
-    return int(max(0, (1.0 - volume) * 100))
+    slider_value = round(-Amplitude2dB(volume)/0.4)
+    return int(max(0, min(100, slider_value)))
 
 def slider2source(slider, obj):
-    slider_value = slider.get()
-    obj.volume = max(0, 1.0 - float(slider_value)/100.0)
+    slider_value = -float(slider.get())*0.4
+    obj.volume = dB2Amplitude(slider_value)
+
+def dB2Amplitude(db):
+    return pow(10.0, db/20.0)
+
+def Amplitude2dB(amplitude):
+  return 20.0 * math.log10(amplitude)
 
 # Example usage
 if __name__ == "__main__":

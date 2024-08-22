@@ -6,6 +6,7 @@ from queue import Queue
 from CircularBuffer import CircularBuffer
 
 class NoiseSoundSource:
+    VolumeThreshold = 0.01
     def __init__(self, generator=None, audio_segment = None, duration = 1.0, initial_volume=1.0, sample_rate=44100):
         """
         :param generator: Function that generates numpy array of audio samples (will override audio_samples)
@@ -18,7 +19,10 @@ class NoiseSoundSource:
         self.duration = duration
         self.sample_rate = sample_rate
         self._volume = initial_volume
-        self.active = True
+        if self.volume <= self.VolumeThreshold:
+            self.active = False
+        else:
+            self.active = True
         self.source_audio_segment__ = audio_segment
         self.current_position = 0
         if self.generator is not None:
@@ -35,7 +39,7 @@ class NoiseSoundSource:
         if in_volume == self._volume:
             return
         self._volume = in_volume
-        if self._volume <= 0.01:
+        if self._volume <= self.VolumeThreshold:
             self.deactivate()
             return
         self.activate()

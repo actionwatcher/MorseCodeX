@@ -17,6 +17,7 @@ def load_morse_table(filename):
 
 
 class MorseSoundSource:
+    VolumeThreshold = 0.01
     def __init__(self, morse_mapping_filename, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5, queue_sz = None):
         self.MORSE_CODE_DICT = load_morse_table(morse_mapping_filename)
         self.signal_dict={}
@@ -24,7 +25,10 @@ class MorseSoundSource:
         self.frequency = frequency
         self.rise_time = rise_time  # Default rise time
         self._volume = volume
-        self.active = True
+        if self.volume <= self.VolumeThreshold:
+            self.active = False
+        else:
+            self.active = True
         self.set_speed(wpm)
         self.signals =[]
         self.data_queue = queue.Queue()
@@ -62,10 +66,11 @@ class MorseSoundSource:
 
     @volume.setter
     def volume(self, in_volume):
-        if in_volume == self._volume:
+        if hasattr(self, '_volume') and in_volume == self._volume:
             return
         self._volume = in_volume
-        if self._volume <= 0.01:
+        print(self._volume)
+        if self._volume <= self.VolumeThreshold:
             self.deactivate()
             return
         self.activate()
