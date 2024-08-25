@@ -18,6 +18,7 @@ from DataSource import DataSource
 import numpy as np
 import helpers
 import time
+import csv
     
 
 class MorseTrainerUI:
@@ -63,6 +64,7 @@ class MorseTrainerUI:
             self.max_speed = tk.IntVar(value=settings.get('max_speed', 50))
             self.training_word_count = tk.IntVar(value=settings.get('word_count', 50))
             self.data_source_file = tk.StringVar(value=settings.get('data_source_file', 'MASTER.SCP'))
+            self.use_challenge = tk.BooleanVar(value=settings.get('challenge', False))
             self.data_source_dir = settings.get('data_source_dir', self.data_path)
             self.cw_volume = settings.get('cw_volume', 0.5)
             self.softness = settings.get('softness', 33)
@@ -84,6 +86,7 @@ class MorseTrainerUI:
             settings['max_speed'] = self.max_speed.get()
             settings['word_count'] = self.training_word_count.get()
             settings['data_source_file'] = self.data_source_file.get()
+            settings['challenge'] = self.use_challenge.get()
             settings['data_source_dir'] = self.data_source_dir
             settings['cw_volume'] = self.morse_source.volume
             settings['softness'] = self.softness
@@ -94,7 +97,7 @@ class MorseTrainerUI:
             settings['tone'] = self.tone
             settings['ser_num'] = self.generate_ser_num.get()
             settings['qrm_volume'] = self.qrm_source.volume
-            settings['qrn_volume'] = self.qrn_source.volume
+            settings['qrn_volume'] = self.qrn_source.volume 
             settings['sort_by'] = self.sort_by
             settings['sort_inverted'] = self.sort_inverted
             
@@ -133,13 +136,16 @@ class MorseTrainerUI:
         self.training_word_count_entry = ttk.Entry(selection_frame, textvariable=self.training_word_count)
         self.training_word_count_entry.grid(row=2, column=1, padx=5, pady=5)
 
+        checkbox1 = ttk.Checkbutton(selection_frame, text="Challenge me", variable=self.use_challenge)
+        checkbox1.grid(row=3, column=0, sticky=tk.W, padx=5, pady=5)
+        
         self.start_button = Button(selection_frame, text="Start", command=self.start_training)
-        self.start_button.grid(row=3, column=0, padx=5, pady=5)
+        self.start_button.grid(row=4, column=0, padx=5, pady=5)
         self.start_button.bind("<Return>", lambda event: self.start_training())
         self.start_button.focus_set()
 
         self.quit_button = Button(selection_frame, text="Quit", command=self.quit_app)
-        self.quit_button.grid(row=3, column=1, padx=5, pady=5)
+        self.quit_button.grid(row=4, column=1, padx=5, pady=5)
 
         self.create_sound_frame(content_frame, row=0, col=1, test_button=True)
 
@@ -257,9 +263,11 @@ class MorseTrainerUI:
         stop_button.grid(row=4, column=0, padx=5, pady=5)
         
         self.root.bind("<F7>", lambda event: self.play_word(delay=1, replay=True))
+        self.load_challenges()
 
         self.data_source = DataSource(file_path=os.path.join(self.data_source_dir, self.data_source_file.get()), num_words=int(self.training_word_count.get()), 
-                                      pre_message=self.pre_msg_chk.get(), serial=self.generate_ser_num.get())
+                                      pre_message=self.pre_msg_chk.get(), serial=self.generate_ser_num.get(),
+                                      challenges=self.challenges, challenge_frac=0.7)
         self.player.start()
         self.morse_source.play_string("vvv")
         self.play_word(3)
@@ -288,7 +296,50 @@ class MorseTrainerUI:
     def frequency(self):
         return int(500 + (1.0 - float(self.tone)/100) * 350) # 500-850 hz
     
+    
+    def load_challenges(self):
+        # open challenges record
+        self.challenge_file, _ = os.path.splitext(self.data_source_file.get())
+        self.challenge_file += '.clg'
+        self.challenges = {}
+        if not self.use_challenge.get():
+            return
+        try:
+            with open(os.path.join(self.data_source_dir, self.challenge_file), mode = "r") as challenge_db:
+                reader = csv.reader(challenge_db)
+                for row in reader:
+                    if not row:
+                        continue
+                    key, val = row
+                    self.challenges[key] = int(val)
+        except FileNotFoundError:
+            pass #legit condition
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    def save_challenges(self):
+    # clean and save challenges
+        if not self.use_challenge.get():
+            return
+        with open(self.challenge_file, mode="w") as challenges_db:
+            writer = csv.writer(challenges_db)
+            for key, value in self.challenges.items():
+                if value < 0:
+                    continue
+                writer.writerow([key, value])
+
+    def remove_challenge(self, sent_text):
+        if not self.use_challenge.get():
+            return
+        if sent_text in self.challenges:
+            self.challenges[sent_text] = self.challenges[sent_text] - 1
+
+    def add_challenge(self, sent_text):
+        if self.use_challenge.get():
+            self.challenges[sent_text] = self.challenges.get(sent_text, 0) + 1
+    
     def create_session_results_screen(self):
+        self.save_challenges()
         if self.current_session is None:
             messagebox.showerror("Error", "No current session available")
             return
@@ -460,12 +511,14 @@ class MorseTrainerUI:
         
         if score == len(sent_text):
             c = 'green'
-            if self.speed_increase:
+            if self.speed_increase: # first receive was correct
                 self.current_speed = min(self.current_speed + 1, self.max_speed.get())
+                self.remove_challenge(sent_text)
             self.speed_increase = True
         else:
             c = 'red'
             self.current_speed = max(self.current_speed - 1, self.init_speed.get())
+            self.add_challenge(sent_text)
         self.received_text.config(text=received_text, fg=c)
         self.sent_text.config(text=sent_text)
         self.morse_source.set_speed(float(self.current_speed))

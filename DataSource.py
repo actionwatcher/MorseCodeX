@@ -1,17 +1,21 @@
 import random
 
 class DataSource:
-    def __init__(self, file_path='MASTER.SCP', num_words=50, pre_message=False, serial=False):
+    def __init__(self, file_path='MASTER.SCP', num_words=50, pre_message=False, serial=False, challenges={}, challenge_frac=0.25):
         self.names = []  # List to store encountered names
-        self.num_words = num_words
+        self.num_challenges = min(int(round(challenge_frac * num_words)), len(challenges))
+        self.num_words = num_words - self.num_challenges
         self.pre_msgs_selection = []
         self.pre_msgs = []
         if pre_message:
             self.pre_msgs_selection = ('tu ,'*20+','*8+'r ,'*4+'qsl ,'+'ur ,'*3).split(',')
         self.generate_sernum = serial
         self.msgs = self._load_words(file_path)
+        self.challenge_list = list(challenges.keys())
+        self.challenge_freq = [ max(1, val) for val in challenges.values()] # chance is proportional to number of erros
+                                                                            # 0 will not include value so replace 0s with 1
         self.reset()
-
+        
     def _load_words(self, file_path):
         words = []
         format_spec = None
@@ -65,10 +69,15 @@ class DataSource:
         else:
             self.selected_msgs = random.choices(self.msgs, k=self.num_words)
         
+        if len(self.challenge_list) and self.num_challenges:
+            selected_challenges = random.sample(self.challenge_list, k=self.num_challenges, counts=self.challenge_freq)
+            self.selected_msgs.extend(selected_challenges)
+            random.shuffle(self.selected_msgs)
+
         if self.pre_msgs_selection:
-            self.pre_msgs = random.choices(self.pre_msgs_selection, k=self.num_words)
+            self.pre_msgs = random.choices(self.pre_msgs_selection, k=(self.num_words + self.num_challenges))
         else:
-            self.pre_msgs = ['' for _ in range(self.num_words)]
+            self.pre_msgs = ['' for _ in range(self.num_words + self.num_challenges)]
         self.index = 0
 
     def get_next_word(self):
