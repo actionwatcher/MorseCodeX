@@ -51,7 +51,7 @@ def dB2Amplitude(db):
     return pow(10.0, db/20.0)
 
 def Amplitude2dB(amplitude):
-  return 20.0 * math.log10(amplitude)
+  return 20.0 * math.log10(max(1.e-6, amplitude))
 
 # Example usage
 if __name__ == "__main__":
