@@ -69,7 +69,6 @@ class MorseSoundSource:
         if hasattr(self, '_volume') and in_volume == self._volume:
             return
         self._volume = in_volume
-        print(self._volume)
         if self._volume <= self.VolumeThreshold:
             self.deactivate()
             return
