@@ -21,14 +21,14 @@ import time
 import csv
     
 
-class MorseTrainerUI:
+class MorseCodeXUI:
     shortcuts = {'T':'0', 'A':'1', 'N':'9'}
 
     def __init__(self, root, compare_function, data_path):
         self.root = root
         self.data_path = data_path
         self.compare_function = compare_function
-        self.root.title("CW Training Machine")
+        self.root.title("MorseCodeX: code mastery for contests and beyond")
         self.load_settings()
         self.root.geometry(f"{self.ui_width}x{self.ui_height}")
         #self.root.bind("<Configure>", self.on_geometry_change)
@@ -579,5 +579,5 @@ else: # python
     base_path = os.path.abspath(".")
 
 root = tk.Tk()
-app = MorseTrainerUI(root, compare, data_path = base_path)
+app = MorseCodeXUI(root, compare, data_path = base_path)
 root.mainloop()
