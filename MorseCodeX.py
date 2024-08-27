@@ -4,8 +4,10 @@ from tkinter import messagebox
 import platform
 if platform.system() == 'Darwin':
     from tkmacosx import Button
+    gLeftButton = '<ButtonRelease-2>'
 else:
     Button = tk.Button
+    gLeftButton = '<ButtonRelease-3>'
 import threading
 import os
 from datetime import datetime, timedelta
@@ -384,7 +386,7 @@ class MorseCodeXUI:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.tree.bind('<ButtonRelease-1>', self.on_click)
-        self.tree.bind('<ButtonRelease-2>', self.show_context_menu)
+        self.tree.bind(gLeftButton, self.show_context_menu)
         self.populate_tree(self.sort_by)
 
         self.create_details_frame()
