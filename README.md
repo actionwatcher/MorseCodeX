@@ -32,3 +32,13 @@ The QRN noise is lightdimmer.wav from ARRL website. Feel free record yourown and
 The QRM is slightly off frequency CQing from NU6N
 
 Premessage checkbox controls if the app sends the pre exchange word: tu, r, qsl to simulate contest environment. There is no uniformity and requirements in the contests and I hear that operators send any of those with tu being the most frequent.
+
+Latest Releases Candidate
+
+v1.0_RC1
+Windows  SHA256: 1E5A7C5B5CB8A9CADDAA5991B76BCEAA92751A87FA7019B3A9CC3BF71D802FE4
+Mac(x86) SHA256: fb4452231c027671906952dba6aff9025bebadc2d63ce3402836067a7f59487b
+
+Latest Release
+
+None
