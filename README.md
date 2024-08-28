@@ -3,12 +3,18 @@ Summary
 MorseCodeX is somewhat similar to RufzXP that I wanted for myself on Mac. Though since it is Python it should work on Widnows and Linux as well. I extended the capabilities so it can be used to pactice contest environment for both calls and messages. The data source is selectable and can be SCP(supercheck partial), text (every message in separate line) or call history files. Format of the file determined automatically. In case of call history files the application extracts only message part it randomly select names for entries without names.
 The application supports English and Cyrrillic characters data sources for V1.
 
-Installation
+Source Code Installation (prefered)
 
 Python 3.9 + required (it can be used with lower version of Python but coloring of the result screens will be incorrect due to a bug in tkinter)
 Following packages (channel::package) with all the dependencies need to be installed:
 * conda-forge::python-sounddevice (numpy will be installed as dependency)
 * only for macs: tkmacosx (that needs to be installed through pip3: pip3 install tkmacosx)
+
+Binary Installation MacOS
+
+* install portaudio. I use brew but any package manager will work: brew install portaudio
+    if you don't have brew search internet for homebrew installation on mac. Currently supported on Catalina and higher
+* download and unarchive MorseCode.zip
 
 Training files are supercheck partials or call history files from N1MM+ logger website thus the training will be on callsignes or exchange messages. However the same way one can form any text file. For example the most common 100 words or anything one desires. Another example can be exchanges for specific contests, letters, numbers, mix and groups. 
 
@@ -37,7 +43,11 @@ Latest Releases Candidate
 
 v1.0_RC1
 Windows  SHA256: 1E5A7C5B5CB8A9CADDAA5991B76BCEAA92751A87FA7019B3A9CC3BF71D802FE4
-Mac(x86) SHA256: fb4452231c027671906952dba6aff9025bebadc2d63ce3402836067a7f59487b
+Mac(x86) SHA256: 1a7a4d880f1c64ca5d629fccb2958814011fe73daed39fecf8acbbbbb5c0ffce
+
+Knowwn issues:
+* slow launch for Mac version
+* Mac version: application data files stored in temprorary directory and not presistent between launches thus settings and scores not preserved
 
 Latest Release
 
