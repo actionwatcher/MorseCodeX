@@ -12,9 +12,9 @@ Following packages (channel::package) with all the dependencies need to be insta
 
 Binary Installation MacOS
 
-* install portaudio. I use brew but any package manager will work: brew install portaudio
-    if you don't have brew search internet for homebrew installation on mac. Currently supported on Catalina and higher
 * download and unarchive MorseCode.zip
+* drag MorseCodeX app into your /Applications folder
+* Run MorseCodeX and approve security requests for it
 
 Training files are supercheck partials or call history files from N1MM+ logger website thus the training will be on callsignes or exchange messages. However the same way one can form any text file. For example the most common 100 words or anything one desires. Another example can be exchanges for specific contests, letters, numbers, mix and groups. 
 
