@@ -26,15 +26,15 @@ import csv
 class MorseCodeXUI:
     shortcuts = {'T':'0', 'A':'1', 'N':'9'}
 
-    def __init__(self, root, compare_function, data_path):
+    def __init__(self, root, compare_function, data_path, user_path):
         self.root = root
         self.data_path = data_path
+        self.user_path = user_path
         self.compare_function = compare_function
         self.root.title("MorseCodeX: code mastery for contests and beyond")
         self.load_settings()
         self.root.geometry(f"{self.ui_width}x{self.ui_height}")
-        #self.root.bind("<Configure>", self.on_geometry_change)
-        self.session_db = SessionDB(os.path.join(self.data_path, 'sessions.db'))
+        self.session_db = SessionDB(os.path.join(self.user_path, 'sessions.db'))
         self.t = [0]
         audio_segment, sample_rate = helpers.read_wav(os.path.join(data_path, 'qrn.wav')) # this file will govern sample rate
         self.player = Mixer(sample_rate=sample_rate)
@@ -61,7 +61,7 @@ class MorseCodeXUI:
         self.create_start_screen()
 
     def load_settings(self):
-        with shelve.open(os.path.join(self.data_path,'settings')) as settings:
+        with shelve.open(os.path.join(self.user_path,'settings')) as settings:
             self.init_speed = tk.IntVar(value=settings.get('init_speed', 27))
             self.max_speed = tk.IntVar(value=settings.get('max_speed', 50))
             self.training_word_count = tk.IntVar(value=settings.get('word_count', 50))
@@ -83,7 +83,7 @@ class MorseCodeXUI:
 
 
     def save_settings(self):
-        with shelve.open(os.path.join(self.data_path,'settings')) as settings:
+        with shelve.open(os.path.join(self.user_path,'settings')) as settings:
             settings['init_speed'] = self.init_speed.get()
             settings['max_speed'] = self.max_speed.get()
             settings['word_count'] = self.training_word_count.get()
@@ -307,7 +307,7 @@ class MorseCodeXUI:
         if not self.use_challenge.get():
             return
         try:
-            with open(os.path.join(self.data_source_dir, self.challenge_file), mode = "r") as challenge_db:
+            with open(os.path.join(self.user_path, self.challenge_file), mode = "r") as challenge_db:
                 reader = csv.reader(challenge_db)
                 for row in reader:
                     if not row:
@@ -323,7 +323,7 @@ class MorseCodeXUI:
     # clean and save challenges
         if not self.use_challenge.get():
             return
-        with open(self.challenge_file, mode="w") as challenges_db:
+        with open(os.path.join(self.user_path,self.challenge_file), mode="w") as challenges_db:
             writer = csv.writer(challenges_db)
             for key, value in self.challenges.items():
                 if value < 0:
@@ -584,6 +584,13 @@ if getattr(sys, 'frozen', False): # application package
 else: # python
     base_path = os.path.abspath(".")
 
+if platform.system() == 'Darwin':
+    user_path = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MorseCodeX', 'configs')
+elif platform.system() == 'Windows':
+    user_path = os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'MorseCodeX', 'configs')
+elif platform.system() == 'Linux':
+    user_path = os.path.join(os.path.expanduser('~'), '.MorseCodeX', 'configs')
+os.makedirs(user_path, exist_ok=True)
 root = tk.Tk()
-app = MorseCodeXUI(root, compare, data_path = base_path)
+app = MorseCodeXUI(root, compare, data_path = base_path, user_path = user_path)
 root.mainloop()
