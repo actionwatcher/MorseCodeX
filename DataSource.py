@@ -2,7 +2,6 @@ import random
 
 class DataSource:
     def __init__(self, file_path='MASTER.SCP', num_words=50, pre_message=False, serial=False, challenges={}, challenge_frac=0.25):
-        self.names = []  # List to store encountered names
         self.num_challenges = min(int(round(challenge_frac * num_words)), len(challenges))
         self.num_words = num_words - self.num_challenges
         self.pre_msgs_selection = []
@@ -21,7 +20,6 @@ class DataSource:
         format_spec = None
         default_names = ['Joe', 'John', 'Nick', 'Mike', 'Geo'] #in case if no name yet present in the dictionalry
         try:
-            pre_msg = ''
             ser_num=''
             with open(file_path, 'r') as file:
                 for line_number, line in enumerate(file):
@@ -44,14 +42,9 @@ class DataSource:
 
                             # Handling empty Name field (empty string '')
                             if 'Name' in word_dict and word_dict['Name'] == '':
-                                if self.names:
-                                    word_dict['Name'] = random.choice(self.names)
-                                else:
-                                    word_dict['Name'] = random.choice(default_names)
-                            
-                            # Add the Name to the list if not empty
-                            if word_dict['Name']:
-                                self.names.append(word_dict['Name'])
+                                word_dict['Name'] = random.choice(default_names)
+                            elif word_dict['Name'] not in default_names:
+                                default_names.append(word_dict['Name'])
 
                             combined_string = ' '.join(
                                 word_dict[field] for field in format_spec if field not in ('Call', 'UserText')

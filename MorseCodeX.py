@@ -470,10 +470,11 @@ class MorseCodeXUI:
             for item in self.pair_tree.get_children():
                 self.pair_tree.delete(item)
             for received, sent, speed, duration in self.selected_session.items:
-                s, m = self.compare_function(sent, received, self.shortcuts)
-                t = 'correct'
-                if s != len(sent):
-                    t = 'in' + t
+                correct, _ = self.compare_function(sent, received, self.shortcuts)
+                if correct:
+                    t = 'correct'
+                else:
+                    t = 'incorrect'
                 self.pair_tree.insert('', tk.END, values=(received, sent, speed, float(duration)), tags=t)
 
     def play_volume_test(self):
@@ -502,16 +503,16 @@ class MorseCodeXUI:
         self.create_main_screen()
 
     def process_entry(self, event, delay=1):
-        received_text = self.entry_field.get().upper()
+        received_text = self.entry_field.get().upper().strip()
         self.entry_field.delete(0, tk.END)
-        sent_text = self.sent_word.upper()
-        score, correctness_mask = self.compare_function(sent_text, received_text, self.shortcuts)
+        sent_text = self.sent_word.upper().strip()
+        equal, score = self.compare_function(sent_text, received_text, self.shortcuts)
 
         self.current_session.add_item(received=received_text, sent=sent_text, speed=self.current_speed, duration=1.3)
         self.current_session.set_score(self.current_session.get_score() + score)
         self.received_cnt += 1
         
-        if score == len(sent_text):
+        if equal:
             c = 'green'
             if self.speed_increase: # first receive was correct
                 self.current_speed = min(self.current_speed + 1, self.max_speed.get())
@@ -564,10 +565,13 @@ def compare(sent_word, received_word, shortcuts):
     score = sum(correctness_mask)
 
     # Extend the correctness mask if the received word is longer
-    if len(correctness_mask) < len(received_word):
-        correctness_mask.extend([False] * (len(received_word) - len(correctness_mask)))
+    if len(received_word) != len(sent_word):
+        correct = False
+    else:
+        # Determine if sent and received are identical enough
+        correct = all(correctness_mask)
 
-    return score, correctness_mask
+    return correct, score
 
 
 # Create main application window
