@@ -303,12 +303,12 @@ class MorseCodeXUI:
     def load_challenges(self):
         # open challenges record
         self.challenge_file, _ = os.path.splitext(self.data_source_file.get())
-        self.challenge_file += '.clg'
+        self.challenge_file += '.chg'
         self.challenges = {}
         if not self.use_challenge.get():
             return
         try:
-            with open(os.path.join(self.user_path, self.challenge_file), mode = "r") as challenge_db:
+            with open(os.path.join(self.data_source_dir, self.challenge_file), mode = "r") as challenge_db:
                 reader = csv.reader(challenge_db)
                 for row in reader:
                     if not row:
@@ -324,7 +324,7 @@ class MorseCodeXUI:
     # clean and save challenges
         if not self.use_challenge.get():
             return
-        with open(os.path.join(self.user_path,self.challenge_file), mode="w") as challenges_db:
+        with open(os.path.join(self.data_source_dir, self.challenge_file), mode="w") as challenges_db:
             writer = csv.writer(challenges_db)
             for key, value in self.challenges.items():
                 if value < 0:
