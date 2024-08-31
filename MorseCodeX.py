@@ -120,6 +120,8 @@ class MorseCodeXUI:
         self.file_path_entry.grid(row=0, column=1, padx=5, pady=5)
         self.file_select_button = Button(file_frame, text="Browse", command=self.select_source_file)
         self.file_select_button.grid(row=0, column=2, padx=5, pady=5)
+        checkbox1 = ttk.Checkbutton(file_frame, text="Challenge me", variable=self.use_challenge)
+        checkbox1.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
 
         content_frame = ttk.Frame(start_frame)
         content_frame.grid(row=1, column=0, padx=5, pady=5, sticky="w")
@@ -139,9 +141,6 @@ class MorseCodeXUI:
         self.training_word_count_entry = ttk.Entry(selection_frame, textvariable=self.training_word_count)
         self.training_word_count_entry.grid(row=2, column=1, padx=5, pady=5)
 
-        checkbox1 = ttk.Checkbutton(selection_frame, text="Challenge me", variable=self.use_challenge)
-        checkbox1.grid(row=3, column=0, sticky=tk.W, padx=5, pady=5)
-        
         self.start_button = Button(selection_frame, text="Start", command=self.start_training)
         self.start_button.grid(row=4, column=0, padx=5, pady=5)
         self.start_button.bind("<Return>", lambda event: self.start_training())
@@ -506,7 +505,7 @@ class MorseCodeXUI:
     def process_entry(self, event, delay=1):
         received_text = self.entry_field.get().upper().strip()
         self.entry_field.delete(0, tk.END)
-        sent_text = self.sent_word.upper().strip()
+        sent_text = self.ser_num.upper() + self.sent_word.upper().strip()
         equal, score = self.compare_function(sent_text, received_text, self.shortcuts)
 
         self.current_session.add_item(received=received_text, sent=sent_text, speed=self.current_speed, duration=1.3)
@@ -517,12 +516,12 @@ class MorseCodeXUI:
             c = 'green'
             if self.speed_increase: # first receive was correct
                 self.current_speed = min(self.current_speed + 1, self.max_speed.get())
-                self.remove_challenge(sent_text)
+                self.remove_challenge(self.sent_word)
             self.speed_increase = True
         else:
             c = 'red'
             self.current_speed = max(self.current_speed - 1, self.init_speed.get())
-            self.add_challenge(sent_text)
+            self.add_challenge(self.sent_word)
         self.received_text.config(text=received_text, fg=c)
         self.sent_text.config(text=sent_text)
         self.morse_source.set_speed(float(self.current_speed))
@@ -536,7 +535,7 @@ class MorseCodeXUI:
 
     def play_word(self, delay, replay=False):
         if replay == False:
-            self.pre_msg, self.sent_word = self.data_source.get_next_word()
+            self.pre_msg, self.ser_num, self.sent_word = self.data_source.get_next_word()
             if not self.sent_word:
                 self.stop_qrm()
                 self.player.stop()
@@ -545,7 +544,7 @@ class MorseCodeXUI:
                 return
         else: 
             self.speed_increase = False
-        threading.Timer(delay, self.morse_source.play_string, args=[self.pre_msg+self.sent_word]).start()
+        threading.Timer(delay, self.morse_source.play_string, args=[self.pre_msg+self.ser_num+self.sent_word]).start()
 
     def stop_qrm(self):
         if self.qrm_thread:
