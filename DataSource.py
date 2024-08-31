@@ -1,9 +1,10 @@
 import random
 
 class DataSource:
-    def __init__(self, file_path='MASTER.SCP', num_words=50, pre_message=False, serial=False, challenges={}, challenge_frac=0.25):
+    def __init__(self, file_path='MASTER.SCP', num_words=50, pre_message=False, rst=False, serial=False, challenges={}, challenge_frac=0.25):
         self.num_challenges = min(int(round(challenge_frac * num_words)), len(challenges))
         self.num_words = num_words - self.num_challenges
+        self.rst = '5nn ' if rst else ''
         self.pre_msgs_selection = []
         self.pre_msgs = []
         self.serial_numbers = []
@@ -78,12 +79,12 @@ class DataSource:
     def get_next_word(self):
         if self.index >= len(self.selected_msgs):
             self.index = 0
-            return (None, None, None)
+            return (None, None, None, None)
         msg = self.selected_msgs[self.index]
         pre_msg = self.pre_msgs[self.index]
         ser_num = self.serial_numbers[self.index] if self.serial_numbers else ''
         self.index += 1
-        return (pre_msg, ser_num, msg)
+        return (pre_msg, self.rst, ser_num, msg)
 
 if __name__ == '__main__':
     data_source = DataSource(file_path='MASTER.SCP', num_words=10)

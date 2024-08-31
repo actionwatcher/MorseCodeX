@@ -77,6 +77,7 @@ class MorseCodeXUI:
             self.pre_msg_chk = tk.BooleanVar(value=settings.get('pre_msg', False))
             self.tone = settings.get('tone', 50)
             self.generate_ser_num = tk.BooleanVar(value=settings.get('ser_num', False))
+            self.generate_rst = tk.BooleanVar(value=settings.get('rst', False))
             self.qrn_volume = settings.get('qrn_volume', 0)
             self.qrm_volume = settings.get('qrm_volume', 0)
             self.sort_by = settings.get('sort_by', 'score')
@@ -99,6 +100,7 @@ class MorseCodeXUI:
             settings['pre_msg'] = self.pre_msg_chk.get()
             settings['tone'] = self.tone
             settings['ser_num'] = self.generate_ser_num.get()
+            settings['rst'] = self.generate_rst.get()
             settings['qrm_volume'] = self.qrm_source.volume
             settings['qrn_volume'] = self.qrn_source.volume 
             settings['sort_by'] = self.sort_by
@@ -208,10 +210,13 @@ class MorseCodeXUI:
             #chk_frame = ttk.Frame(sound_frame)
             chk_frame.grid(row=2, column=0, rowspan=1, columnspan=6, padx=10, pady=5, sticky="we")
             checkbox2 = ttk.Checkbutton(chk_frame, text="SerNumber", variable=self.generate_ser_num)
-            checkbox2.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
+            checkbox2.grid(row=0, column=2, sticky=tk.W, padx=5, pady=5)
             
             checkbox1 = ttk.Checkbutton(chk_frame, text="Pre message", variable=self.pre_msg_chk)
             checkbox1.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+
+            checkbox3 = ttk.Checkbutton(chk_frame, text="RST", variable=self.generate_rst)
+            checkbox3.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
 
             test_sound_button = Button(sound_frame, text="Test Sound", command=self.play_volume_test)
             test_sound_button.grid(row=6, column=0, pady=5, columnspan=6, sticky=tk.W + tk.E)
@@ -268,7 +273,7 @@ class MorseCodeXUI:
         self.load_challenges()
 
         self.data_source = DataSource(file_path=os.path.join(self.data_source_dir, self.data_source_file.get()), num_words=int(self.training_word_count.get()), 
-                                      pre_message=self.pre_msg_chk.get(), serial=self.generate_ser_num.get(),
+                                      pre_message=self.pre_msg_chk.get(), rst = self.generate_rst.get(), serial=self.generate_ser_num.get(),
                                       challenges=self.challenges, challenge_frac=0.7)
         self.player.start()
         self.morse_source.play_string("vvv")
@@ -535,7 +540,7 @@ class MorseCodeXUI:
 
     def play_word(self, delay, replay=False):
         if replay == False:
-            self.pre_msg, self.ser_num, self.sent_word = self.data_source.get_next_word()
+            self.pre_msg, self.rst, self.ser_num, self.sent_word = self.data_source.get_next_word()
             if not self.sent_word:
                 self.stop_qrm()
                 self.player.stop()
@@ -544,7 +549,7 @@ class MorseCodeXUI:
                 return
         else: 
             self.speed_increase = False
-        threading.Timer(delay, self.morse_source.play_string, args=[self.pre_msg+self.ser_num+self.sent_word]).start()
+        threading.Timer(delay, self.morse_source.play_string, args=[self.pre_msg+self.rst+self.ser_num+self.sent_word]).start()
 
     def stop_qrm(self):
         if self.qrm_thread:
