@@ -33,7 +33,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     version='version.txt',
-    icon=['MorseCodeX.png'],
+    icon=['MorseCodeX.ico'],
 )
 coll = COLLECT(
     exe,
@@ -47,7 +47,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='MorseCodeX.app',
-    icon='MorseCodeX.png',
+    icon='MorseCodeX.ico',
     bundle_identifier=None,
     info_plist={
 	'CFBundleShortVersionString': '1.0 RC3'
