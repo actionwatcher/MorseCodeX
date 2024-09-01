@@ -274,7 +274,7 @@ class MorseCodeXUI:
 
         self.data_source = DataSource(file_path=os.path.join(self.data_source_dir, self.data_source_file.get()), num_words=int(self.training_word_count.get()), 
                                       pre_message=self.pre_msg_chk.get(), rst = self.generate_rst.get(), serial=self.generate_ser_num.get(),
-                                      challenges=self.challenges, challenge_frac=0.7)
+                                      challenges=self.challenges, challenge_frac=0.25)
         self.player.start()
         self.morse_source.play_string("vvv")
         self.play_word(3)
