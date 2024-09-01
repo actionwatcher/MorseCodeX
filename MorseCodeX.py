@@ -588,9 +588,11 @@ import shutil
 # detect running mode and set path accordingly
 if getattr(sys, 'frozen', False): # application package
     # Running in a bundle
-    base_path = os.path.join(sys._MEIPASS, 'conf')
+    bin_path = sys._MEIPASS
+    base_path = os.path.join(bin_path, 'conf')
 else: # python
     base_path = os.path.abspath(".")
+    bin_path = base_path
 
 if platform.system() == 'Darwin':
     user_path = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MorseCodeX', 'configs')
@@ -619,5 +621,6 @@ if os.path.exists(guard_file):
     os.remove(guard_file)
 
 root = tk.Tk()
+root.iconbitmap(os.path.join(bin_path, 'MorseCodex.ico'))
 app = MorseCodeXUI(root, compare, base_path = base_path, data_path = data_path, user_path = user_path)
 root.mainloop()
