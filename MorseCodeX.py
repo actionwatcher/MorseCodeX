@@ -280,8 +280,10 @@ class MorseCodeXUI:
         self.play_word(3)
         self.run_qrm_thread = True # yes, always start. when qrm_source is inactive play_string does nothing, thus thread will be mostly idle(for now)
         def qrm_sender():
+            self.qrm_source.play_string("cq test nu6n")
+            time.sleep(5)
             while(self.run_qrm_thread):
-                self.qrm_source.play_string("cq test nu6n")
+                self.qrm_source.play_string()
                 time.sleep(6)
         self.qrm_thread = threading.Timer(3, qrm_sender)
         self.qrm_thread.start()
@@ -541,6 +543,7 @@ class MorseCodeXUI:
     def play_word(self, delay, replay=False):
         if replay == False:
             self.pre_msg, self.rst, self.ser_num, self.sent_word = self.data_source.get_next_word()
+            msg = self.pre_msg+self.rst+self.ser_num+self.sent_word
             if not self.sent_word:
                 self.stop_qrm()
                 self.player.stop()
@@ -549,7 +552,8 @@ class MorseCodeXUI:
                 return
         else: 
             self.speed_increase = False
-        threading.Timer(delay, self.morse_source.play_string, args=[self.pre_msg+self.rst+self.ser_num+self.sent_word]).start()
+            msg = None
+        threading.Timer(delay, self.morse_source.play_string, args=[msg]).start()
 
     def stop_qrm(self):
         if self.qrm_thread:

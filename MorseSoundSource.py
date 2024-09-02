@@ -25,6 +25,7 @@ class MorseSoundSource:
         self.frequency = frequency
         self.rise_time = rise_time  # Default rise time
         self._volume = volume
+        self.signal = np.array([]) # last sent signal
         if self.volume <= self.VolumeThreshold:
             self.active = False
         else:
@@ -40,6 +41,7 @@ class MorseSoundSource:
     def reset(self):
         while(not self.data_queue.empty()):
             self.data_queue.get()
+        self.signal = np.array([])
     
     def set_speed(self, wpm, slowdown=0):
         # Calculate durations based on WPM
@@ -141,12 +143,17 @@ class MorseSoundSource:
             "word_gap_array": self.word_gap_array
         }
 
-    def play_string(self, message):
+    def play_string(self, message = None):
+        """ will repeat previously sent message if no new message provided """
         if not self.active:
             return 0
-        signal = self._convert_to_signal(message.upper())
-        self.data_queue.put(signal)
-        return float(len(signal))/self.sample_rate
+        if message:
+            self.signal = self._convert_to_signal(message.upper())
+        if self.signal.any():
+            self.data_queue.put(self.signal)
+            return float(len(self.signal))/self.sample_rate
+        else:
+            return 0
     
     def get_audio_segment(self, duration):
         size = int(self.sample_rate * duration)
@@ -214,4 +221,4 @@ class MorseSoundSource:
                 char = message[i]
                 signal = np.concatenate([signal, self.signal_dict[char]])
             i += 1
-        return signal  # Return list of Morse code strings
+        return signal  # Return array of samples
