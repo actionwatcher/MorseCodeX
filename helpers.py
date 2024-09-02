@@ -53,6 +53,12 @@ def dB2Amplitude(db):
 def Amplitude2dB(amplitude):
   return 20.0 * math.log10(max(1.e-6, amplitude))
 
+def genererate_score_multipliers(speed_range):
+    min_speed = speed_range[0]
+    max_speed = speed_range[1]
+    speeds = np.array(range(min_speed, max_speed), dtype=np.float32)
+    mults = pow((speeds - speeds[0])/(speeds[-1] - speeds[0]), 2) * 7.0 + 1.0
+    return mults
 # Example usage
 if __name__ == "__main__":
     audio_segment, sample_rate = read_wav('qrn.wav')

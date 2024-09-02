@@ -25,6 +25,8 @@ import csv
 
 class MorseCodeXUI:
     shortcuts = {'T':'0', 'A':'1', 'N':'9'}
+    speed_range = [10, 65] #WPM
+    score_multipliers = helpers.genererate_score_multipliers(speed_range)
 
     def __init__(self, root, compare_function, base_path, data_path, user_path):
         self.root = root
@@ -514,6 +516,8 @@ class MorseCodeXUI:
         self.entry_field.delete(0, tk.END)
         sent_text = self.ser_num.upper() + self.sent_word.upper().strip()
         equal, score = self.compare_function(sent_text, received_text, self.shortcuts)
+        mult = self.score_multipliers[self.current_speed - self.speed_range[0]]
+        score = int(round(score*mult))
 
         self.current_session.add_item(received=received_text, sent=sent_text, speed=self.current_speed, duration=1.3)
         self.current_session.set_score(self.current_session.get_score() + score)
@@ -543,8 +547,9 @@ class MorseCodeXUI:
     def play_word(self, delay, replay=False):
         if replay == False:
             self.pre_msg, self.rst, self.ser_num, self.sent_word = self.data_source.get_next_word()
-            msg = self.pre_msg+self.rst+self.ser_num+self.sent_word
-            if not self.sent_word:
+            if self.sent_word:
+                msg = self.pre_msg+self.rst+self.ser_num+self.sent_word
+            else:
                 self.stop_qrm()
                 self.player.stop()
                 self.morse_source.reset()
