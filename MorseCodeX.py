@@ -30,6 +30,8 @@ class MorseCodeXUI:
 
     def __init__(self, root, compare_function, base_path, data_path, user_path):
         self.root = root
+        self.root.protocol("WM_DELETE_WINDOW", self.quit_app)
+        self.root.createcommand("::tk::mac::Quit", self.quit_app)
         self.base_path = base_path
         self.data_path = data_path
         self.user_path = user_path
