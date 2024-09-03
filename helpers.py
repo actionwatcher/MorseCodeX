@@ -56,9 +56,17 @@ def Amplitude2dB(amplitude):
 def genererate_score_multipliers(speed_range):
     min_speed = speed_range[0]
     max_speed = speed_range[1]
-    speeds = np.array(range(min_speed, max_speed), dtype=np.float32)
+    speeds = np.array(range(min_speed, max_speed+1), dtype=np.float32)
     mults = pow((speeds - speeds[0])/(speeds[-1] - speeds[0]), 2) * 7.0 + 1.0
     return mults
+
+def range_checker(lower, upper):
+    def binded_checker(val):
+        if val.isdigit() and lower <= int(val) <= upper:
+            return True
+        return False
+    return binded_checker
+
 # Example usage
 if __name__ == "__main__":
     audio_segment, sample_rate = read_wav('qrn.wav')

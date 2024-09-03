@@ -67,7 +67,7 @@ class MorseCodeXUI:
         with shelve.open(os.path.join(self.user_path,'settings')) as settings:
             self.init_speed = tk.IntVar(value=settings.get('init_speed', 27))
             self.max_speed = tk.IntVar(value=settings.get('max_speed', 50))
-            self.training_word_count = tk.IntVar(value=settings.get('word_count', 50))
+            self.training_word_count = tk.IntVar(value=settings.get('word_count', 55))
             self.data_source_file = tk.StringVar(value=settings.get('data_source_file', 'MASTER.SCP'))
             self.use_challenge = tk.BooleanVar(value=settings.get('challenge', False))
             self.data_source_dir = settings.get('data_source_dir', self.data_path)
@@ -134,15 +134,31 @@ class MorseCodeXUI:
         selection_frame.grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
         ttk.Label(selection_frame, text="Min/Initial Speed (WPM):").grid(row=0, column=0, padx=5, pady=5)
-        self.init_speed_entry = ttk.Entry(selection_frame, textvariable=self.init_speed)
+        speed_checker = helpers.range_checker(self.speed_range[0], self.speed_range[1])
+        validate_speed_command = root.register(speed_checker)
+        self.init_speed_entry = tk.Spinbox(selection_frame, from_=self.speed_range[0], to=self.speed_range[1],
+                                        wrap=False, textvariable=self.init_speed,
+                                        validate="key", validatecommand=(validate_speed_command, '%P')
+                                        )
         self.init_speed_entry.grid(row=0, column=1, padx=5, pady=5)
         
         ttk.Label(selection_frame, text="Max Speed (WPM):").grid(row=1, column=0, padx=5, pady=5)
-        self.max_speed_entry = ttk.Entry(selection_frame, textvariable=self.max_speed)
+        self.max_speed_entry = tk.Spinbox(selection_frame, from_=self.speed_range[0], to=self.speed_range[1],
+                                        wrap=False, textvariable=self.max_speed,
+                                        validate="key", validatecommand=(validate_speed_command, '%P')
+                                        )
         self.max_speed_entry.grid(row=1, column=1, padx=5, pady=5)
 
+        counts = [5, 8, 13, 21, 34, 55, 89, 144, 233, 377]
+        count_checker = helpers.range_checker(counts[0], counts[-1])
+        validate_count_command = root.register(count_checker)
         ttk.Label(selection_frame, text="Training messages count:").grid(row=2, column=0, padx=5, pady=5)
-        self.training_word_count_entry = ttk.Entry(selection_frame, textvariable=self.training_word_count)
+        temp = self.training_word_count.get() # this spinbox bug - the default value is not set but overwritten
+        self.training_word_count_entry = tk.Spinbox(selection_frame, values=counts,
+                                                    wrap=False, textvariable=self.training_word_count,
+                                                    validate="key", validatecommand=(validate_count_command, '%P')
+                                                    )
+        self.training_word_count.set(temp)
         self.training_word_count_entry.grid(row=2, column=1, padx=5, pady=5)
 
         self.start_button = Button(selection_frame, text="Start", command=self.start_training)
@@ -517,8 +533,8 @@ class MorseCodeXUI:
         sent_text = self.ser_num.upper() + self.sent_word.upper().strip()
         equal, score = self.compare_function(sent_text, received_text, self.shortcuts)
         mult = self.score_multipliers[self.current_speed - self.speed_range[0]]
-        score = int(round(score*mult))
-
+        score = int(round(score*mult)) if self.speed_increase else int(round(score*mult/3.0))
+        
         self.current_session.add_item(received=received_text, sent=sent_text, speed=self.current_speed, duration=1.3)
         self.current_session.set_score(self.current_session.get_score() + score)
         self.received_cnt += 1
