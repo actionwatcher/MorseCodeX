@@ -41,14 +41,8 @@ Premessage checkbox controls if the app sends the pre exchange word: tu, r, qsl 
 
 Latest Releases Candidate
 
-v1.0_RC1
-Windows  SHA256: 1E5A7C5B5CB8A9CADDAA5991B76BCEAA92751A87FA7019B3A9CC3BF71D802FE4
-v1.0_RC2
-Mac(x86) SHA256: f69e22bf3d6cbe8795d58eefd09c8a55e22b2bcfa033062a57d28ebedaf75735
+v1.0_RC3
 
-Knowwn issues:
-* slow launch for Mac version
-* Mac version: application data files stored in Application directory
 
 Latest Release
 
