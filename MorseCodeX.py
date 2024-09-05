@@ -121,7 +121,7 @@ class MorseCodeXUI:
         source_frame = ttk.LabelFrame(start_frame, text="Message Source")
         option_frame = ttk.LabelFrame(start_frame, text="Message Options")
         param_frame = ttk.LabelFrame(start_frame, text="Training parameters")
-        sound_frame = self.create_sound_frame(start_frame, row=1, col=1, test_button=True)
+        sound_frame = self.create_sound_frame(start_frame, test_button=True)
 
         
         source_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
@@ -197,7 +197,7 @@ class MorseCodeXUI:
             self.data_source_file.set(selected_file)
             self.data_source_dir = selected_dir
 
-    def create_sound_frame(self, main_frame, row=0, col=1, rowspan=4, test_button=False):
+    def create_sound_frame(self, main_frame, test_button=False):
         sound_frame = ttk.LabelFrame(main_frame, text="Sound")
         volume_col, softness_col, tone_col,noise_col,qrn_col,qrm_col = range(6)
         
@@ -248,43 +248,43 @@ class MorseCodeXUI:
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill="both", expand=True)
 
-        data_frame = ttk.LabelFrame(main_frame, text="Current Data")
-        data_frame.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        param_frame = ttk.LabelFrame(main_frame, text="Training Parameters")
+        cur_param_frame = ttk.LabelFrame(main_frame, text="Current Parameters")
+        result_frame = ttk.LabelFrame(main_frame, text="Current Result")
+        sound_frame = self.create_sound_frame(main_frame)
+        
+        param_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        cur_param_frame.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        result_frame.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        sound_frame.grid(row=0, column=1, pady=5, padx=5, rowspan=3, sticky="nswe")
 
-        self.speed_label = ttk.Label(data_frame, text=f"Speed: {self.current_speed} WPM")
+        # current params
+        self.speed_label = ttk.Label(cur_param_frame, text=f"Speed: {self.current_speed} WPM")
         self.speed_label.grid(row=0, column=0, padx=5, pady=5)
         
         self.current_session = Session(date=datetime.now().isoformat())
-        self.score_label = ttk.Label(data_frame, text=f"Score: {self.current_session.score}")
+        self.score_label = ttk.Label(cur_param_frame, text=f"Score: {self.current_session.score}")
         self.score_label.grid(row=0, column=1, padx=5, pady=5)
 
-        self.count_label = ttk.Label(data_frame, text=f"Count: {self.received_cnt}")
+        self.count_label = ttk.Label(cur_param_frame, text=f"Count: {self.received_cnt}")
         self.count_label.grid(row=0, column=2, padx=5, pady=5)
 
-        set_data_frame = ttk.LabelFrame(main_frame, text="Set Data")
-        set_data_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        # training prameters
+        ttk.Label(param_frame, text=f"Initial Speed: {self.init_speed.get()} WPM").grid(row=0, column=0, padx=5, pady=5)
+        ttk.Label(param_frame, text=f"Max Speed: {self.max_speed.get()} WPM").grid(row=0, column=1, padx=5, pady=5)
 
-        ttk.Label(set_data_frame, text=f"Initial Speed: {self.init_speed.get()} WPM").grid(row=0, column=0, padx=5, pady=5)
-        ttk.Label(set_data_frame, text=f"Max Speed: {self.max_speed.get()} WPM").grid(row=0, column=1, padx=5, pady=5)
-
-        text_frame = ttk.LabelFrame(main_frame, text="Text")
-        text_frame.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
-
-        ttk.Label(text_frame, text="Received:").grid(row=0, column=1, padx=5, pady=5)
-        self.received_text = tk.Label(text_frame, height=2, width=25, relief="sunken", anchor="e")
+        ttk.Label(result_frame, text="Received:").grid(row=0, column=1, padx=5, pady=5)
+        self.received_text = tk.Label(result_frame, height=2, width=25, relief="sunken", anchor="e")
         self.received_text.grid(row=1, column=1, padx=5, pady=5)
 
-        ttk.Label(text_frame, text="Sent:").grid(row=0, column=0, padx=5, pady=5)
-        self.sent_text = tk.Label(text_frame, height=2, width=25, relief="sunken", anchor="w")
+        ttk.Label(result_frame, text="Sent:").grid(row=0, column=0, padx=5, pady=5)
+        self.sent_text = tk.Label(result_frame, height=2, width=25, relief="sunken", anchor="w")
         self.sent_text.grid(row=1, column=0, padx=5, pady=5)
 
         self.entry_field = ttk.Entry(main_frame)
         self.entry_field.grid(row=3, column=0, padx=5, pady=5)
         self.entry_field.bind("<Return>", self.process_entry)
         self.entry_field.focus_set()
-
-        self.create_sound_frame(main_frame, row=0, col=1, rowspan=3)
-        
 
         stop_button = Button(main_frame, text="Stop", command=self.create_session_results_screen)
         stop_button.grid(row=4, column=0, padx=5, pady=5)
