@@ -118,34 +118,48 @@ class MorseCodeXUI:
         start_frame.pack(fill="both", expand=True)
 
         # File selection at the top, aligned to the left
-        file_frame = ttk.Frame(start_frame)
-        file_frame.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        source_frame = ttk.LabelFrame(start_frame, text="Message Source")
+        option_frame = ttk.LabelFrame(start_frame, text="Message Options")
+        param_frame = ttk.LabelFrame(start_frame, text="Training parameters")
+        sound_frame = self.create_sound_frame(start_frame, row=1, col=1, test_button=True)
 
-        ttk.Label(file_frame, text="Select File:").grid(row=0, column=0, padx=5, pady=5)
-        self.file_path_entry = ttk.Entry(file_frame, textvariable=self.data_source_file, width=40)
+        
+        source_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        option_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+        param_frame.grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        sound_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
+        
+        # Message Source
+        self.file_path_entry = ttk.Entry(source_frame, textvariable=self.data_source_file, width=30)
         self.file_path_entry.grid(row=0, column=1, padx=5, pady=5)
-        self.file_select_button = Button(file_frame, text="Browse", command=self.select_source_file)
+        self.file_select_button = Button(source_frame, text="Browse", command=self.select_source_file)
         self.file_select_button.grid(row=0, column=2, padx=5, pady=5)
-        checkbox1 = ttk.Checkbutton(file_frame, text="Challenge me", variable=self.use_challenge)
+        checkbox1 = ttk.Checkbutton(source_frame, text="Challenge me", variable=self.use_challenge)
         checkbox1.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
+        
+        # Message Option
+        checkbox2 = ttk.Checkbutton(option_frame, text="SerNumber", variable=self.generate_ser_num)
+        checkbox2.grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        
+        checkbox1 = ttk.Checkbutton(option_frame, text="Pre message", variable=self.pre_msg_chk)
+        checkbox1.grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
 
-        content_frame = ttk.Frame(start_frame)
-        content_frame.grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        checkbox3 = ttk.Checkbutton(option_frame, text="RST", variable=self.generate_rst)
+        checkbox3.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
 
-        selection_frame = ttk.LabelFrame(content_frame, text="Training parameters")
-        selection_frame.grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
-        ttk.Label(selection_frame, text="Min/Initial Speed (WPM):").grid(row=0, column=0, padx=5, pady=5)
+        # Training parameters
+        ttk.Label(param_frame, text="Min/Initial Speed (WPM):").grid(row=0, column=0, padx=5, pady=5)
         speed_checker = helpers.range_checker(self.speed_range[0], self.speed_range[1])
         validate_speed_command = root.register(speed_checker)
-        self.init_speed_entry = tk.Spinbox(selection_frame, from_=self.speed_range[0], to=self.speed_range[1],
+        self.init_speed_entry = tk.Spinbox(param_frame, from_=self.speed_range[0], to=self.speed_range[1],
                                         wrap=False, textvariable=self.init_speed,
                                         validate="key", validatecommand=(validate_speed_command, '%P')
                                         )
         self.init_speed_entry.grid(row=0, column=1, padx=5, pady=5)
         
-        ttk.Label(selection_frame, text="Max Speed (WPM):").grid(row=1, column=0, padx=5, pady=5)
-        self.max_speed_entry = tk.Spinbox(selection_frame, from_=self.speed_range[0], to=self.speed_range[1],
+        ttk.Label(param_frame, text="Max Speed (WPM):").grid(row=1, column=0, padx=5, pady=5)
+        self.max_speed_entry = tk.Spinbox(param_frame, from_=self.speed_range[0], to=self.speed_range[1],
                                         wrap=False, textvariable=self.max_speed,
                                         validate="key", validatecommand=(validate_speed_command, '%P')
                                         )
@@ -154,24 +168,22 @@ class MorseCodeXUI:
         counts = [5, 8, 13, 21, 34, 55, 89, 144, 233, 377]
         count_checker = helpers.range_checker(counts[0], counts[-1])
         validate_count_command = root.register(count_checker)
-        ttk.Label(selection_frame, text="Training messages count:").grid(row=2, column=0, padx=5, pady=5)
+        ttk.Label(param_frame, text="Training messages count:").grid(row=2, column=0, padx=5, pady=5)
         temp = self.training_word_count.get() # this spinbox bug - the default value is not set but overwritten
-        self.training_word_count_entry = tk.Spinbox(selection_frame, values=counts,
+        self.training_word_count_entry = tk.Spinbox(param_frame, values=counts,
                                                     wrap=False, textvariable=self.training_word_count,
                                                     validate="key", validatecommand=(validate_count_command, '%P')
                                                     )
         self.training_word_count.set(temp)
         self.training_word_count_entry.grid(row=2, column=1, padx=5, pady=5)
 
-        self.start_button = Button(selection_frame, text="Start", command=self.start_training)
+        self.start_button = Button(param_frame, text="Start", command=self.start_training)
         self.start_button.grid(row=4, column=0, padx=5, pady=5)
         self.start_button.bind("<Return>", lambda event: self.start_training())
         self.start_button.focus_set()
 
-        self.quit_button = Button(selection_frame, text="Quit", command=self.quit_app)
+        self.quit_button = Button(param_frame, text="Quit", command=self.quit_app)
         self.quit_button.grid(row=4, column=1, padx=5, pady=5)
-
-        self.create_sound_frame(content_frame, row=0, col=1, test_button=True)
 
 
     def select_source_file(self):
@@ -187,7 +199,6 @@ class MorseCodeXUI:
 
     def create_sound_frame(self, main_frame, row=0, col=1, rowspan=4, test_button=False):
         sound_frame = ttk.LabelFrame(main_frame, text="Sound")
-        sound_frame.grid(row=row, column=col, rowspan=rowspan, padx=10, pady=5, sticky="ns")
         volume_col, softness_col, tone_col,noise_col,qrn_col,qrm_col = range(6)
         
         ttk.Label(sound_frame, text="Volume").grid(row=0, column=volume_col, padx=5, pady=5)
@@ -225,21 +236,10 @@ class MorseCodeXUI:
         qrm_slider.grid(row=1, column=qrm_col, padx=5, pady=5)
 
         if test_button:
-            # # Add checkboxes to the sound_frame
-            chk_frame = ttk.LabelFrame(sound_frame, text="Message options")
-            #chk_frame = ttk.Frame(sound_frame)
-            chk_frame.grid(row=2, column=0, rowspan=1, columnspan=6, padx=10, pady=5, sticky="we")
-            checkbox2 = ttk.Checkbutton(chk_frame, text="SerNumber", variable=self.generate_ser_num)
-            checkbox2.grid(row=0, column=2, sticky=tk.W, padx=5, pady=5)
-            
-            checkbox1 = ttk.Checkbutton(chk_frame, text="Pre message", variable=self.pre_msg_chk)
-            checkbox1.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
-
-            checkbox3 = ttk.Checkbutton(chk_frame, text="RST", variable=self.generate_rst)
-            checkbox3.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
-
             test_sound_button = Button(sound_frame, text="Test Sound", command=self.play_volume_test)
             test_sound_button.grid(row=6, column=0, pady=5, columnspan=6, sticky=tk.W + tk.E)
+        
+        return sound_frame
 
     def create_main_screen(self):
         for widget in self.root.winfo_children():
