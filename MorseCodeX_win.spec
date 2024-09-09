@@ -5,7 +5,15 @@ a = Analysis(
     ['MorseCodeX.py'],
     pathex=[],
     binaries=[],
-    datas=[('morse_table.json', './conf'), ('MASTER.SCP', './conf'), ('MASUSVE.SCP', './conf'), ('NAQPCW.txt', './conf'), ('ca_counties.txt', './conf'), ('MASTERDX.SCP', './conf'), ('states_provinces.txt', './conf'), ('letters.txt', './conf'), ('numbers.txt', './conf'), ('qrn.wav', './conf'), ('CWOPS_3600-DDD.txt', './conf'), ('MorseCodeX.ico', './')],
+    datas=[(
+        'configs/morse_table.json', './configs'), ('configs/qrn.wav', './configs'), ('configs/kbd_mapping.txt', './configs'),
+        ('data_sources/MASTER.SCP', './data_sources'), ('data_sources/numbers.txt', './data_sources'),
+        ('data_sources/CWOPS_3600-DDD.txt', './data_sources'), ('data_sources/MASUSVE.SCP', './data_sources'),
+        ('data_sources/NAQPCW.txt', './data_sources'), ('data_sources/ca_counties.txt', './data_sources'),
+        ('data_sources/MASTERDX.SCP', './data_sources'), ('data_sources/states_provinces.txt', './data_sources'),
+        ('data_sources/letters.txt', './data_sources'),
+        ('MorseCodeX.ico', './')
+        ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
