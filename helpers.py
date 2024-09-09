@@ -1,6 +1,7 @@
 import wave
 import numpy as np
 import math
+import ast
 
 def read_wav(file_path):
     with wave.open(file_path, 'rb') as wf:
@@ -67,10 +68,63 @@ def range_checker(lower, upper):
         return False
     return binded_checker
 
+def read_file_to_dict(filename):
+    """Reads a text file and converts it into a dictionary with the shortcut and parameters."""
+    success = True
+    commands_dict = {}
+    try:
+        with open(filename, 'r') as file:
+            for line in file:
+                line = line.strip()
+                if line:
+                    command, params = line.split(":", 1)
+                    command = command.strip().lower()
+                    
+                    params_list = [param.strip() for param in params.split(",")]
+
+                    # First element is always the shortcut
+                    shortcut = params_list[0].upper()
+                    # Remaining parameters go into a tuple and evaluated to their correct types
+                    params_tuple = tuple(ast.literal_eval(param) for param in params_list[1:])
+                    
+                    commands_dict[command] = (shortcut, params_tuple)
+    except FileNotFoundError:
+        success = False
+
+    return success, commands_dict
+
+def write_dict_to_file(commands_dict, filename):
+    """Writes a dictionary into a text file."""
+    with open(filename, 'w') as file:
+        for command, (shortcut, params) in commands_dict.items():
+            # Convert the tuple of parameters to a string for writing
+            params_str = ', '.join([repr(param) if isinstance(param, str) else str(param) for param in params])
+            file.write(f"{command}: {shortcut}, {params_str}\n")
+
+
 # Example usage
 if __name__ == "__main__":
+    import os
     audio_segment, sample_rate = read_wav('qrn.wav')
     # remove first and last 3 seconds
     idx = 3 * sample_rate
     audio_segment = audio_segment[idx:-idx]
     write_wav('output.wav', audio_segment, sample_rate)
+    
+    # Dictionary read/write test
+    commands = {
+        "repeat": ("<F7>", (2,)),
+        "cq": ("<F1>", (1, "hello", 3.1)),
+        "stop": ("<F9>", (0,))
+    }
+    file1 = 'test_commands.txt'
+    write_dict_to_file(commands, file1)
+    read_commands = read_file_to_dict('test_commands.txt')
+    assert commands == read_commands, f"Original and read dictionaries do not match! {commands} != {read_commands}"
+    commands["new_command"] = ("<F5>", (4, "new_param", 10.5))
+    file2 = 'test_commands_modified.txt'
+    write_dict_to_file(commands, file2)
+    read_modified_commands = read_file_to_dict(file2)
+    assert commands == read_modified_commands, f"Modified and read dictionaries do not match! {commands} != {read_modified_commands}"
+    os.remove(file1)
+    os.remove(file2)

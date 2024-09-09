@@ -27,23 +27,27 @@ class MorseCodeXUI:
     shortcuts = {'T':'0', 'A':'1', 'N':'9'}
     speed_range = [10, 65] #WPM
     score_multipliers = helpers.genererate_score_multipliers(speed_range)
+    default_kbd_shortcuts = {'repeat': ('<F6>', 1)}
 
-    def __init__(self, root, compare_function, base_path, data_path, user_path):
+    def __init__(self, root, compare_function, config_path, data_path):
         self.root = root
         self.root.protocol("WM_DELETE_WINDOW", self.quit_app)
         self.root.createcommand("::tk::mac::Quit", self.quit_app)
-        self.base_path = base_path
+        self.config_path = config_path
         self.data_path = data_path
-        self.user_path = user_path
         self.compare_function = compare_function
         self.root.title("MorseCodeX: code mastery for contests and beyond")
         self.load_settings()
         self.root.geometry(f"{self.ui_width}x{self.ui_height}")
-        self.session_db = SessionDB(os.path.join(self.user_path, 'sessions.db'))
+        self.session_db = SessionDB(os.path.join(self.config_path, 'sessions.db'))
+        filefound, self.kbd_shortcuts = helpers.read_file_to_dict(os.path.join(self.config_path, "kbd_mapping.txt"))
+        if not filefound:
+            messagebox.showinfo("Configuratoion error", "Keyboard mapping was not found! Falling back to default.")
+            self.kbd_shortcuts = self.default_kbd_shortcuts
         self.t = [0]
-        audio_segment, sample_rate = helpers.read_wav(os.path.join(base_path, 'qrn.wav')) # this file will govern sample rate
+        audio_segment, sample_rate = helpers.read_wav(os.path.join(self.config_path, 'qrn.wav')) # this file will govern sample rate
         self.player = Mixer(sample_rate=sample_rate)
-        morse_file = os.path.join(self.base_path, "morse_table.json")
+        morse_file = os.path.join(self.config_path, "morse_table.json")
         self.morse_source = MorseSoundSource(morse_mapping_filename = morse_file, wpm=self.init_speed.get(), frequency=self.frequency, rise_time=self.rise_time, volume=self.cw_volume)
         self.player.add_source(self.morse_source)
         qrm_freq = np.random.choice([*range(100, 360, 20), *range(900, 1060, 20)])
@@ -66,10 +70,10 @@ class MorseCodeXUI:
         self.create_start_screen()
 
     def load_settings(self):
-        with shelve.open(os.path.join(self.user_path,'settings')) as settings:
+        with shelve.open(os.path.join(self.config_path,'settings')) as settings:
             self.init_speed = tk.IntVar(value=settings.get('init_speed', 27))
             self.max_speed = tk.IntVar(value=settings.get('max_speed', 50))
-            self.training_word_count = tk.IntVar(value=settings.get('word_count', 55))
+            self.training_word_count = tk.IntVar(value=settings.get('word_count', 50))
             self.data_source_file = tk.StringVar(value=settings.get('data_source_file', 'MASTER.SCP'))
             self.use_challenge = tk.BooleanVar(value=settings.get('challenge', False))
             self.data_source_dir = settings.get('data_source_dir', self.data_path)
@@ -89,7 +93,7 @@ class MorseCodeXUI:
 
 
     def save_settings(self):
-        with shelve.open(os.path.join(self.user_path,'settings')) as settings:
+        with shelve.open(os.path.join(self.config_path,'settings')) as settings:
             settings['init_speed'] = self.init_speed.get()
             settings['max_speed'] = self.max_speed.get()
             settings['word_count'] = self.training_word_count.get()
@@ -289,7 +293,7 @@ class MorseCodeXUI:
         stop_button = Button(main_frame, text="Stop", command=self.create_session_results_screen)
         stop_button.grid(row=4, column=0, padx=5, pady=5)
         
-        self.root.bind("<F7>", lambda event: self.play_word(delay=1, replay=True))
+        self.root.bind(self.kbd_shortcuts['repeat'][0], lambda event: self.play_word(delay=1, replay=True))
         self.load_challenges()
 
         self.data_source = DataSource(file_path=os.path.join(self.data_source_dir, self.data_source_file.get()), num_words=int(self.training_word_count.get()), 
@@ -614,40 +618,37 @@ import shutil
 
 # detect running mode and set path accordingly
 if getattr(sys, 'frozen', False): # application package
-    # Running in a bundle
     bin_path = sys._MEIPASS
-    base_path = os.path.join(bin_path, 'conf')
 else: # python
-    base_path = os.path.abspath(".")
-    bin_path = base_path
+    bin_path = os.path.abspath(".")
 
 if platform.system() == 'Darwin':
-    user_path = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MorseCodeX', 'configs')
+    config_path = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MorseCodeX', 'configs')
     data_path = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MorseCodeX', 'data')
 elif platform.system() == 'Windows':
-    user_path = os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'MorseCodeX', 'configs')
+    config_path = os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'MorseCodeX', 'configs')
     data_path = os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'MorseCodeX', 'data')
 elif platform.system() == 'Linux':
-    user_path = os.path.join(os.path.expanduser('~'), '.MorseCodeX', 'configs')
+    config_path = os.path.join(os.path.expanduser('~'), '.MorseCodeX', 'configs')
     data_path = os.path.join(os.path.expanduser('~'), '.MorseCodeX', 'data')
 
 guard_file = os.path.join(data_path, 'notdone.txt')
 if not os.path.exists(data_path): #first time running
-    os.makedirs(user_path, exist_ok=True)
+    os.makedirs(config_path, exist_ok=True)
     os.makedirs(data_path, exist_ok=True)
     open(guard_file, 'a').close()
 
 #copy data files into user location
 if os.path.exists(guard_file):
-    conf = os.path.join(base_path, '*.txt')
-    for file in glob.glob(conf):
+    data = os.path.join(bin_path, 'data_sources/*.*')
+    for file in glob.glob(data):
         shutil.copy(file, data_path)
-    conf = os.path.join(base_path, '*.SCP')
+    conf = os.path.join(bin_path, 'configs/*.*')
     for file in glob.glob(conf):
-        shutil.copy(file, data_path)
+        shutil.copy(file, config_path)
     os.remove(guard_file)
 
 root = tk.Tk()
 root.iconbitmap(os.path.join(bin_path, 'MorseCodex.ico'))
-app = MorseCodeXUI(root, compare, base_path = base_path, data_path = data_path, user_path = user_path)
+app = MorseCodeXUI(root, compare, config_path = config_path, data_path = data_path)
 root.mainloop()
