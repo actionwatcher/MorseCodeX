@@ -1,7 +1,6 @@
 import platform
 import subprocess
 from update_version import update_version
-import shutil
 
 def run_pyinstaller():
     # Determine the operating system
@@ -19,12 +18,9 @@ def run_pyinstaller():
         return
 
     update_version()
-    # Run PyInstaller with the selected .spec file
-    #command = ['pyinstaller', spec_file]
-    command = ['pyinstaller', '--noconfirm', 'MorseCodeX_mac.spec']
+    command = ['pyinstaller', '--noconfirm', spec_file]
 
     try:
-        #PyInstaller.__main__.run('MorseCodeX_mac.spec')
         # Run the command and capture the output
         result = subprocess.run(command, check=True, capture_output=True, text=True)
 
