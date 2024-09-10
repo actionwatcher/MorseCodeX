@@ -17,7 +17,7 @@ def load_morse_table(filename):
 
 
 class MorseSoundSource:
-    VolumeThreshold = 0.01
+    VolumeThreshold = 0.01 #determines if the source considered active or not
     def __init__(self, morse_mapping_filename, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5, queue_sz = None):
         self.MORSE_CODE_DICT = load_morse_table(morse_mapping_filename)
         self.signal_dict={}
