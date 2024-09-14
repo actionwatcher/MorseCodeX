@@ -5,8 +5,10 @@ a = Analysis(
     ['MorseCodeX.py'],
     pathex=[],
     binaries=[],
-    datas=[(
-        'configs/morse_table.json', './configs'), ('configs/qrn.wav', './configs'), ('configs/kbd_mapping.txt', './configs'),
+    datas=[
+        ('current_version.ver', './'), ('version_migrations.json', './'),
+        ('configs/morse_table.json', './configs'), ('configs/qrn.wav', './configs'), ('configs/kbd_mapping.txt', './configs'),
+        ('data_sources/MASTERSS.SCP', './data_sources'), ('data_sources/common100.txt', './data_sources'),
         ('data_sources/MASTER.SCP', './data_sources'), ('data_sources/numbers.txt', './data_sources'),
         ('data_sources/CWOPS_3600-DDD.txt', './data_sources'), ('data_sources/MASUSVE.SCP', './data_sources'),
         ('data_sources/NAQPCW.txt', './data_sources'), ('data_sources/ca_counties.txt', './data_sources'),

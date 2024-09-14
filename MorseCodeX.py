@@ -21,6 +21,7 @@ import numpy as np
 import helpers
 import time
 import csv
+from helpers import log
     
 
 class MorseCodeXUI:
@@ -45,6 +46,9 @@ class MorseCodeXUI:
             messagebox.showinfo("Configuratoion error", "Keyboard mapping was not found! Falling back to default.")
             self.kbd_shortcuts = self.default_kbd_shortcuts
         self.t = [0]
+        if not os.path.exists(os.path.join(self.config_path, 'qrn.wav')):
+            messagebox.showinfo("Configuration error", "qrn.wav file was not found")
+            exit()
         audio_segment, sample_rate = helpers.read_wav(os.path.join(self.config_path, 'qrn.wav')) # this file will govern sample rate
         self.player = Mixer(sample_rate=sample_rate)
         morse_file = os.path.join(self.config_path, "morse_table.json")
@@ -348,7 +352,7 @@ class MorseCodeXUI:
         except FileNotFoundError:
             pass #legit condition
         except Exception as e:
-            print(f"An error occurred: {e}")
+            log('error', f"An error occurred: {e}")
 
     def save_challenges(self):
     # clean and save challenges
@@ -619,24 +623,44 @@ import shutil
 # detect running mode and set path accordingly
 if getattr(sys, 'frozen', False): # application package
     bin_path = sys._MEIPASS
+    helpers.init_log('frozen_debug')
 else: # python
     bin_path = os.path.abspath(".")
+    helpers.init_log('debug')
 
 if platform.system() == 'Darwin':
-    config_path = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MorseCodeX', 'configs')
-    data_path = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MorseCodeX', 'data')
+    base_path = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MorseCodeX')
 elif platform.system() == 'Windows':
-    config_path = os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'MorseCodeX', 'configs')
-    data_path = os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'MorseCodeX', 'data')
+    base_path = os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'MorseCodeX')
 elif platform.system() == 'Linux':
-    config_path = os.path.join(os.path.expanduser('~'), '.MorseCodeX', 'configs')
-    data_path = os.path.join(os.path.expanduser('~'), '.MorseCodeX', 'data')
+    base_path = os.path.join(os.path.expanduser('~'), '.MorseCodeX')
+else:
+    log('error', 'Unsupported platform')
+    exit()
+config_path = os.path.join(base_path, 'configs')
+data_path = os.path.join(base_path, 'data')
 
+# Copy or update files if needed
 guard_file = os.path.join(data_path, 'notdone.txt')
-if not os.path.exists(data_path): #first time running
+if not os.path.exists(data_path) or os.path.exists(guard_file): #first time running
     os.makedirs(config_path, exist_ok=True)
     os.makedirs(data_path, exist_ok=True)
+    version_file = os.path.join(bin_path, 'current_version.ver')
+    shutil.copy(version_file, os.path.dirname(data_path)) #copy into containing directory
     open(guard_file, 'a').close()
+else:
+    with open(os.path.join(bin_path, 'current_version.ver'), 'r') as file:
+        current_version = file.readline()
+    existing_file = os.path.join(base_path, 'current_version.ver')
+    if os.path.exists(existing_file):
+        with open(existing_file, 'r') as file:
+            existing_version = file.readline()
+    else:
+        existing_version = '0.0.0.0'
+    migration_file = os.path.join(bin_path, 'version_migrations.json')
+    update_completed = helpers.update_data(existing_version, current_version, migration_file, src_dir = bin_path, dst_dir = base_path)
+    if update_completed:
+        shutil.copy(os.path.join(bin_path, 'current_version.ver'), existing_file) #replace with newer
 
 #copy data files into user location
 if os.path.exists(guard_file):

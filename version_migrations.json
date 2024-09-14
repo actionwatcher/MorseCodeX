@@ -1,0 +1,13 @@
+{
+    "0.9.4.0": {
+      "add": [
+        { "source": "configs/kbd_mapping.txt", "destination": "configs/kbd_mapping.txt" ,"description": "New feature: keyboard mapping" },
+        { "source": "configs/qrn.wav", "destination": "configs/qrn.wav" ,"description": "Config change: location change" },
+        { "source": "configs/morse_table.json", "destination": "configs/morse_table.json" ,"description": "New feature: custom morse mapping" },
+        { "source": "data_sources/MASTERSS.SCP", "destination": "data/MASTERSS.SCP" ,"description": "New feature: W/VE/US territories calls" },
+        { "source": "data_sources/common100.txt", "destination": "data/common100.txt" ,"description": "New feature: 100most common words" }
+      ],
+      "delete": [],
+      "modify": []
+    }
+}

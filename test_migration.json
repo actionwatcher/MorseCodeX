@@ -1,0 +1,27 @@
+{
+    "1.0": {
+      "add": [
+        { "file": "fileX.txt", "description": "New feature X implementation" }
+      ],
+      "delete": [],
+      "modify": [
+        { "file": "config.yaml", "description": "Added new configuration option Y" }
+      ]
+    },
+    "1.1": {
+      "add": [],
+      "delete": [
+        { "file": "fileZ.txt",  "description": "File deprecated and no longer needed" }
+      ],
+      "modify": [
+        { "file": "config.yaml", "description": "Tweaked setting Z" }
+      ]
+    },
+    "2.0": {
+      "add": [
+        { "file": "fileD.txt", "description": "New feature for version 2.0" }
+      ],
+      "delete": [],
+      "modify": []
+    }
+  }

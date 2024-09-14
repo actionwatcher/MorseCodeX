@@ -2,6 +2,9 @@ import wave
 import numpy as np
 import math
 import ast
+import shutil
+import json
+import os
 
 def read_wav(file_path):
     with wave.open(file_path, 'rb') as wf:
@@ -101,11 +104,101 @@ def write_dict_to_file(commands_dict, filename):
             params_str = ', '.join([repr(param) if isinstance(param, str) else str(param) for param in params])
             file.write(f"{command}: {shortcut}, {params_str}\n")
 
+# version update support 
+def compare_versions(previous_version, new_version):
+    # Split the versions by '.' and convert each part to an integer
+    previous_parts = [int(part) for part in previous_version.split('.')]
+    new_parts = [int(part) for part in new_version.split('.')]
+
+    # Compare each part
+    for prev, new in zip(previous_parts, new_parts):
+        if new > prev:
+            return 1  # New version is higher
+        elif new < prev:
+            return -1  # New version is lower
+    return 0
+
+# Load JSON data
+
+def apply_updates(current_version, target_version, migrations, src_dir, dst_dir):
+    # Get the list of versions between current and target
+    version_chain = get_version_chain(current_version, target_version, migrations)
+
+    for version in version_chain:
+        changes = migrations[version]
+        apply_additions(changes['add'], src_dir, dst_dir)
+        apply_deletions(changes['delete'], src_dir, dst_dir)
+        apply_modifications(changes['modify'], version, src_dir, dst_dir)
+    
+    return True
+
+def get_version_chain(current_version, target_version, migrations):
+    available_versions = sorted(migrations.keys())  # Ensure versions are sorted for comparison
+    version_chain = [ver for ver in available_versions if current_version <= ver <= target_version]
+    return version_chain
+
+def apply_additions(additions, src_dir, dst_dir):
+    for file_info in additions:
+        print(f"Adding file: {file_info['source']} at {file_info['destination']}")
+        shutil.copy(os.path.join(src_dir, file_info['source']),
+            os.path.join(dst_dir, file_info['destination']))
+
+def apply_deletions(deletions, src_dir, dst_dir):
+    for file_info in deletions:
+        print(f"Deleting file: {file_info['source']} at {file_info['destination']}")
+        try:
+            os.remove(filename)
+        except OSError:
+            pass
+
+def apply_modifications(modifications, version, src_dir, dst_dir):
+    for file_info in modifications:
+        print(f"Modifying file: {file_info['source']} at {file_info['destination']}")
+
+def update_data(old_version: str, new_version: str, migration_file, src_dir, dst_dir) -> bool:
+    if compare_versions(old_version, new_version) < 0:
+        log('debug', "Data downgrade is not supported")
+        return False
+    
+    if compare_versions(old_version, new_version) == 0:
+        log('debug', 'No data upgrade needed')
+        return False
+    
+    # Update data
+    try:
+        with open(migration_file, "r") as file:
+            migrations = json.load(file)
+
+        result = apply_updates(old_version, new_version, migrations, src_dir, dst_dir)
+    except Exception as e:
+        log('error', e)
+        result = False
+    log('debug', f'Data update complete with {result}')
+    return result
+
+
+# logging 
+from tkinter import messagebox
+def null_print(*args):
+    pass
+
+db_print = null_print
+
+def init_log(context: str):
+    global db_print
+    if context == 'frozen_debug':
+        db_print = messagebox.showinfo
+    else:
+        db_print = print
+
+def log(level: str, message, *args):
+    level = level.lower()
+    db_print(level, message)
 
 # Example usage
 if __name__ == "__main__":
     import os
-    audio_segment, sample_rate = read_wav('qrn.wav')
+    audio_segment, sample_rate = read_wav('configs/qrn.wav')
     # remove first and last 3 seconds
     idx = 3 * sample_rate
     audio_segment = audio_segment[idx:-idx]
@@ -119,12 +212,18 @@ if __name__ == "__main__":
     }
     file1 = 'test_commands.txt'
     write_dict_to_file(commands, file1)
-    read_commands = read_file_to_dict('test_commands.txt')
-    assert commands == read_commands, f"Original and read dictionaries do not match! {commands} != {read_commands}"
+    success, read_commands = read_file_to_dict(file1)
+    assert success and commands == read_commands, f"Original and read dictionaries do not match! {commands} != {read_commands}"
     commands["new_command"] = ("<F5>", (4, "new_param", 10.5))
     file2 = 'test_commands_modified.txt'
     write_dict_to_file(commands, file2)
-    read_modified_commands = read_file_to_dict(file2)
-    assert commands == read_modified_commands, f"Modified and read dictionaries do not match! {commands} != {read_modified_commands}"
+    success, read_modified_commands = read_file_to_dict(file2)
+    assert success and commands == read_modified_commands, f"Modified and read dictionaries do not match! {commands} != {read_modified_commands}"
     os.remove(file1)
     os.remove(file2)
+    with open('test_migration.json', 'r') as file:
+        migrations = json.load(file)
+    m = get_version_chain("0.9", "2.5", migrations)
+    assert m == ['1.0', '1.1', '2.0']
+    update_data("0.9", "1.1", 'test_migration.json', './', './test')
+    
