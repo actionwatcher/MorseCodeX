@@ -157,7 +157,7 @@ def apply_modifications(modifications, version, src_dir, dst_dir):
 
 def update_data(old_version: str, new_version: str, migration_file, src_dir, dst_dir) -> bool:
     if compare_versions(old_version, new_version) < 0:
-        log('debug', "Data downgrade is not supported")
+        log('info', "Data downgrade is not supported")
         return False
     
     if compare_versions(old_version, new_version) == 0:
@@ -182,18 +182,27 @@ from tkinter import messagebox
 def null_print(*args):
     pass
 
-db_print = null_print
+log_print = null_print
+log_level = 'release' 
 
 def init_log(context: str):
-    global db_print
+    global log_print
+    global log_level
     if context == 'frozen_debug':
-        db_print = messagebox.showinfo
+        log_print = messagebox.showinfo
+        log_level= 'debug'
+    elif context == 'frozen_release':
+        log_print = messagebox.showinfo
+        log_level = 'release'
     else:
-        db_print = print
-
+        log_level= 'debug'
+        log_print = print
+    
 def log(level: str, message, *args):
     level = level.lower()
-    db_print(level, message)
+    if level == 'debug' and log_level != 'debug':
+        return
+    log_print(level, message)
 
 # Example usage
 if __name__ == "__main__":

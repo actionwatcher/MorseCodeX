@@ -43,11 +43,11 @@ class MorseCodeXUI:
         self.session_db = SessionDB(os.path.join(self.config_path, 'sessions.db'))
         filefound, self.kbd_shortcuts = helpers.read_file_to_dict(os.path.join(self.config_path, "kbd_mapping.txt"))
         if not filefound:
-            messagebox.showinfo("Configuratoion error", "Keyboard mapping was not found! Falling back to default.")
+            log("warning","Keyboard mapping was not found! Falling back to default.")
             self.kbd_shortcuts = self.default_kbd_shortcuts
         self.t = [0]
         if not os.path.exists(os.path.join(self.config_path, 'qrn.wav')):
-            messagebox.showinfo("Configuration error", "qrn.wav file was not found")
+            log("error", "qrn.wav file was not found")
             exit()
         audio_segment, sample_rate = helpers.read_wav(os.path.join(self.config_path, 'qrn.wav')) # this file will govern sample rate
         self.player = Mixer(sample_rate=sample_rate)
@@ -623,7 +623,7 @@ import shutil
 # detect running mode and set path accordingly
 if getattr(sys, 'frozen', False): # application package
     bin_path = sys._MEIPASS
-    helpers.init_log('frozen_debug')
+    helpers.init_log('frozen_release')
 else: # python
     bin_path = os.path.abspath(".")
     helpers.init_log('debug')

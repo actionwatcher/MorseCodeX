@@ -1,4 +1,5 @@
 import random
+from helpers import log
 
 class DataSource:
     def __init__(self, file_path='MASTER.SCP', num_words=50, pre_message=False, rst=False, serial=False, challenges={}, challenge_frac=0.25):
@@ -56,7 +57,7 @@ class DataSource:
                         else:
                             words.append(line)
         except FileNotFoundError:
-            print(f"File {file_path} not found.")
+            log("error", f"File {file_path} not found.")
         return words
     
     def reset(self):

@@ -2,6 +2,7 @@ import numpy as np
 import sounddevice as sd
 import queue
 import json
+from helpers import log
 
 def load_morse_table(filename):
     try:
@@ -9,11 +10,11 @@ def load_morse_table(filename):
             morse_code_dict = json.load(file)
         return morse_code_dict
     except FileNotFoundError:
-        print(f"Morse code mapping file <{filename}> not found.")
-        return {}
-    except json.JSONDecodeError:
-        print(f"JSON error decoding morse mapping file <{filename}>.")
-        return {}
+        log("error", f"Morse code mapping file <{filename}> not found.")
+        exit() #FiXIT move exception handling up. This is not a correct place 
+    except json.JSONDecodeError as e:
+        log("error", f"Unable to decode {filename}: {e}")
+        exit()
 
 
 class MorseSoundSource:
