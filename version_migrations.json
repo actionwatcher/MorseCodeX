@@ -9,5 +9,12 @@
       ],
       "delete": [],
       "modify": []
+    },
+    "0.9.5.0": {
+      "add": [],
+      "delete": [],
+      "modify": [
+        { "source": "configs/sessions.db", "destination": "configs/sessions.db" ,"description": "New schema: future statistics support" }
+      ]
     }
 }

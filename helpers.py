@@ -153,7 +153,13 @@ def apply_deletions(deletions, src_dir, dst_dir):
 
 def apply_modifications(modifications, version, src_dir, dst_dir):
     for file_info in modifications:
-        print(f"Modifying file: {file_info['source']} at {file_info['destination']}")
+        if version == '0.9.5.0':
+            from SessionDB import convert_v0950
+            db_name = os.path.join(dst_dir, file_info['destination'])
+            log('debug', f"Modifying file: {db_name}")
+            convert_v0950(db_name)
+        else:
+            log('error', "version transition to {version} is not specified")
 
 def update_data(old_version: str, new_version: str, migration_file, src_dir, dst_dir) -> bool:
     if compare_versions(old_version, new_version) < 0:
@@ -198,11 +204,11 @@ def init_log(context: str):
         log_level= 'debug'
         log_print = print
     
-def log(level: str, message, *args):
+def log(level: str, *args):
     level = level.lower()
     if level == 'debug' and log_level != 'debug':
         return
-    log_print(level, message)
+    log_print(level, *args)
 
 # Example usage
 if __name__ == "__main__":

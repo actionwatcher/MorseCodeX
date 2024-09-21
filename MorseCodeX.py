@@ -270,7 +270,12 @@ class MorseCodeXUI:
         self.speed_label = ttk.Label(cur_param_frame, text=f"Speed: {self.current_speed} WPM")
         self.speed_label.grid(row=0, column=0, padx=5, pady=5)
         
-        self.current_session = Session(date=datetime.now().isoformat())
+        self.current_session = Session(date=datetime.now().isoformat(),
+            source_name=self.data_source_file.get(),
+            volume = self.morse_source.volume,
+            noise = self.hfnoise_source.volume,
+            qrn = self.qrn_source.volume,
+            qrm = self.qrm_source.volume)
         self.score_label = ttk.Label(cur_param_frame, text=f"Score: {self.current_session.score}")
         self.score_label.grid(row=0, column=1, padx=5, pady=5)
 
@@ -546,7 +551,7 @@ class MorseCodeXUI:
         score = int(round(score*mult)) if self.speed_increase else int(round(score*mult/3.0))
         
         self.current_session.add_item(received=received_text, sent=sent_text, speed=self.current_speed, duration=1.3)
-        self.current_session.set_score(self.current_session.get_score() + score)
+        self.current_session.score += score
         self.received_cnt += 1
         
         if equal:
@@ -623,7 +628,7 @@ import shutil
 # detect running mode and set path accordingly
 if getattr(sys, 'frozen', False): # application package
     bin_path = sys._MEIPASS
-    helpers.init_log('frozen_release')
+    helpers.init_log('frozen_debug')
 else: # python
     bin_path = os.path.abspath(".")
     helpers.init_log('debug')
@@ -642,27 +647,31 @@ data_path = os.path.join(base_path, 'data')
 
 # Copy or update files if needed
 guard_file = os.path.join(data_path, 'notdone.txt')
-if not os.path.exists(data_path) or os.path.exists(guard_file): #first time running
+new_version_file = os.path.join(bin_path, 'current_version.ver')
+if not os.path.exists(data_path) or os.path.exists(guard_file): #first time running - new install
     os.makedirs(config_path, exist_ok=True)
     os.makedirs(data_path, exist_ok=True)
-    version_file = os.path.join(bin_path, 'current_version.ver')
-    shutil.copy(version_file, os.path.dirname(data_path)) #copy into containing directory
+    shutil.copy(new_version_file, os.path.dirname(data_path)) #copy into containing directory
     open(guard_file, 'a').close()
-else:
-    with open(os.path.join(bin_path, 'current_version.ver'), 'r') as file:
+else: # Upgrade data if possible
+    with open(new_version_file, 'r') as file:
         current_version = file.readline()
-    existing_file = os.path.join(base_path, 'current_version.ver')
-    if os.path.exists(existing_file):
-        with open(existing_file, 'r') as file:
+    existing_version_file = os.path.join(base_path, 'current_version.ver')
+    if os.path.exists(existing_version_file):
+        with open(existing_version_file, 'r') as file:
             existing_version = file.readline()
     else:
         existing_version = '0.0.0.0'
-    migration_file = os.path.join(bin_path, 'version_migrations.json')
-    update_completed = helpers.update_data(existing_version, current_version, migration_file, src_dir = bin_path, dst_dir = base_path)
-    if update_completed:
-        shutil.copy(os.path.join(bin_path, 'current_version.ver'), existing_file) #replace with newer
+    if helpers.compare_versions(existing_version, current_version) != 0:
+        migration_file = os.path.join(bin_path, 'version_migrations.json')
+        update_completed = helpers.update_data(existing_version, current_version, migration_file, src_dir = bin_path, dst_dir = base_path)
+        if update_completed:
+            shutil.copy(new_version_file, existing_version_file) #replace with newer
+        else:
+            log('error', f'Unable update. Delete directory {base_path} and try again. All custom settings and results will be lost')
+            exit()
 
-#copy data files into user location
+#copy data files into user location. New installation or failed data update
 if os.path.exists(guard_file):
     data = os.path.join(bin_path, 'data_sources/*.*')
     for file in glob.glob(data):
