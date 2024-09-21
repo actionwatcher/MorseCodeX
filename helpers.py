@@ -42,14 +42,21 @@ def write_wav(file_path, audio_segment, sample_rate):
         # Write the audio data to the file
         wf.writeframes(audio_data.tobytes())
 
+L_min = -40  # Minimum loudness in dB
+L_max = 0    # Maximum loudness in dB
+
 def volume2value(volume):
     ''' Tk sliders value that goes from top to bottom '''
-    slider_value = round(-Amplitude2dB(volume)/0.4)
+    db = Amplitude2dB(volume)
+    slider_value = (db - L_min)/(L_max - L_min)
+    slider_value = round(100.0*(1 - slider_value))
     return int(max(0, min(100, slider_value)))
 
 def slider2source(slider, obj):
-    slider_value = -float(slider.get())*0.4
-    obj.volume = dB2Amplitude(slider_value)
+    slider_value = float(100 - slider.get())/100.0
+    db = slider_value * (L_max - L_min) + L_min
+    obj.volume = dB2Amplitude(db)
+    return obj.volume
 
 def dB2Amplitude(db):
     return pow(10.0, db/20.0)
@@ -241,4 +248,19 @@ if __name__ == "__main__":
     m = get_version_chain("0.9", "2.5", migrations)
     assert m == ['1.0', '1.1', '2.0']
     update_data("0.9", "1.1", 'test_migration.json', './', './test')
-    
+    import random
+    random_numbers = random.sample(range(0, 101), 50)
+    class test_obj:
+        def __init__(self):
+            self.volume = -1.0
+    class test_slider:
+        def __init__(self, n):
+            self.n = n
+        def get(self):
+            return self.n
+    for n in random_numbers:
+        obj = test_obj()
+        slider = test_slider(n)
+        vol = slider2source(slider, obj)
+        n1 = volume2value(vol)
+        assert n == n1, f"Initial: {n}, roundtripped: {n1}, with volume {vol}"

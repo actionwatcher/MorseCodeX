@@ -4,9 +4,10 @@ from time import sleep, time
 import threading
 from queue import Queue
 from CircularBuffer import CircularBuffer
+import helpers
 
 class NoiseSoundSource:
-    VolumeThreshold = 0.01
+    VolumeThreshold = helpers.dB2Amplitude(helpers.L_min) #determines if the source considered active or not
     def __init__(self, generator=None, audio_segment = None, duration = 1.0, initial_volume=1.0, sample_rate=44100):
         """
         :param generator: Function that generates numpy array of audio samples (will override audio_samples)

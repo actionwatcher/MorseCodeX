@@ -3,6 +3,7 @@ import sounddevice as sd
 import queue
 import json
 from helpers import log
+import helpers
 
 def load_morse_table(filename):
     try:
@@ -18,7 +19,7 @@ def load_morse_table(filename):
 
 
 class MorseSoundSource:
-    VolumeThreshold = 0.01 #determines if the source considered active or not
+    VolumeThreshold = helpers.dB2Amplitude(helpers.L_min) #determines if the source considered active or not
     def __init__(self, morse_mapping_filename, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5, queue_sz = None):
         self.MORSE_CODE_DICT = load_morse_table(morse_mapping_filename)
         self.signal_dict={}
@@ -36,8 +37,6 @@ class MorseSoundSource:
         self.data_queue = queue.Queue()
         if queue_sz:
             self.data_queue.maxsize = queue_sz
-        if self.volume <= 0.01:
-            self.deactivate()
 
     def reset(self):
         while(not self.data_queue.empty()):
