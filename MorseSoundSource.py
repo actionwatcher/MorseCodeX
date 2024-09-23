@@ -22,6 +22,7 @@ class MorseSoundSource:
     VolumeThreshold = helpers.dB2Amplitude(helpers.L_min) #determines if the source considered active or not
     def __init__(self, morse_mapping_filename, wpm=20, frequency=650, sample_rate=44100, rise_time=0.1, volume = 0.5, queue_sz = None):
         self.MORSE_CODE_DICT = load_morse_table(morse_mapping_filename)
+        self._cur_msg = ''
         self.signal_dict={}
         self.sample_rate = sample_rate  # Standard audio sample rate in Hz
         self.frequency = frequency
@@ -118,6 +119,7 @@ class MorseSoundSource:
         self.symbol_gap_array = np.zeros(int(self.symbol_gap * self.sample_rate))
         self.word_gap_array = np.zeros(int(self.word_gap * self.sample_rate))
         self._build_signal_dict()
+        self.signal = self._convert_to_signal(self._cur_msg)
     
     def get_speed(self):
         return self.wpm
@@ -148,9 +150,11 @@ class MorseSoundSource:
         if not self.active:
             return 0
         if message:
-            self.signal = self._convert_to_signal(message.upper())
+            self._cur_msg = message.upper()
+            self.signal = self._convert_to_signal(self._cur_msg)
         if self.signal.any():
             self.data_queue.put(self.signal)
+            log('debug', 'put in queue')
             return float(len(self.signal))/self.sample_rate
         else:
             return 0
