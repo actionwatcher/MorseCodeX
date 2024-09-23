@@ -45,7 +45,11 @@ class DataSource:
                             combined_string = ' '.join(
                                 word_dict[field] for field in format_spec if field not in ('Call', 'UserText')
                             )
-                            if self.generate_sernum:
+                            words.append(combined_string)
+                        else:
+                            words.append(line)
+                        
+                        if self.generate_sernum:
                                 ser_num = str(random.randint(1, 1300)) + ' '
                                 if random.choice([0, 1, 2]) == 0: # in 1/3 cases
                                     ser_num = ser_num.replace('1', 'a').replace('9', 'n').replace('0', 't')
@@ -53,9 +57,6 @@ class DataSource:
                                     while(len(ser_num)<4):
                                         ser_num = 't' + ser_num
                                 self.serial_numbers.append(ser_num)
-                            words.append(combined_string)
-                        else:
-                            words.append(line)
         except FileNotFoundError:
             log("error", f"File {file_path} not found.")
         return words
