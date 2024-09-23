@@ -148,6 +148,8 @@ class MorseSoundSource:
     def play_string(self, message = None):
         """ will repeat previously sent message if no new message provided """
         if not self.active:
+            if message:
+                self._cur_msg = message.upper()
             return 0
         if message:
             self._cur_msg = message.upper()
