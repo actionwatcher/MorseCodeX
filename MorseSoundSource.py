@@ -154,7 +154,6 @@ class MorseSoundSource:
             self.signal = self._convert_to_signal(self._cur_msg)
         if self.signal.any():
             self.data_queue.put(self.signal)
-            log('debug', 'put in queue')
             return float(len(self.signal))/self.sample_rate
         else:
             return 0
