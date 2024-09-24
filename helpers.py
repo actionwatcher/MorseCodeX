@@ -141,7 +141,7 @@ def apply_updates(current_version, target_version, migrations, src_dir, dst_dir)
 
 def get_version_chain(current_version, target_version, migrations):
     available_versions = sorted(migrations.keys())  # Ensure versions are sorted for comparison
-    version_chain = [ver for ver in available_versions if current_version <= ver <= target_version]
+    version_chain = [ver for ver in available_versions if current_version < ver <= target_version]
     return version_chain
 
 def apply_additions(additions, src_dir, dst_dir):
@@ -154,7 +154,7 @@ def apply_deletions(deletions, src_dir, dst_dir):
     for file_info in deletions:
         print(f"Deleting file: {file_info['source']} at {file_info['destination']}")
         try:
-            os.remove(filename)
+            os.remove(file_info['destination'])
         except OSError:
             pass
 

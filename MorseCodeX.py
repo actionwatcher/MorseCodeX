@@ -10,6 +10,7 @@ else:
     gLeftButton = '<ButtonRelease-3>'
 import threading
 import os
+import sys
 from datetime import datetime, timedelta
 import shelve
 from SessionDB import Session, SessionDB
@@ -48,7 +49,7 @@ class MorseCodeXUI:
         self.t = [0]
         if not os.path.exists(os.path.join(self.config_path, 'qrn.wav')):
             log("error", "qrn.wav file was not found")
-            exit()
+            sys.exit()
         audio_segment, sample_rate = helpers.read_wav(os.path.join(self.config_path, 'qrn.wav')) # this file will govern sample rate
         self.player = Mixer(sample_rate=sample_rate)
         morse_file = os.path.join(self.config_path, "morse_table.json")
@@ -620,7 +621,6 @@ def compare(sent_word, received_word, shortcuts):
 
 
 # Create main application window
-import sys
 import glob
 import shutil
 
@@ -641,7 +641,7 @@ elif platform.system() == 'Linux':
     base_path = os.path.join(os.path.expanduser('~'), '.MorseCodeX')
 else:
     log('error', 'Unsupported platform')
-    exit()
+    sys.exit()
 config_path = os.path.join(base_path, 'configs')
 data_path = os.path.join(base_path, 'data')
 
@@ -669,7 +669,7 @@ else: # Upgrade data if possible
             shutil.copy(new_version_file, existing_version_file) #replace with newer
         else:
             log('error', f'Unable update. Delete directory {base_path} and try again. All custom settings and results will be lost')
-            exit()
+            sys.exit()
 
 #copy data files into user location. New installation or failed data update
 if os.path.exists(guard_file):
