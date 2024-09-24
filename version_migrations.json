@@ -11,10 +11,17 @@
       "modify": []
     },
     "0.9.5.0": {
-      "add": [],
+      "add": [{ "source": "data_sources/cqp.txt", "destination": "data/cqp.txt" ,"description": "New feature: CA QSO party" }
+    ],
       "delete": [],
       "modify": [
         { "source": "configs/sessions.db", "destination": "configs/sessions.db" ,"description": "New schema: future statistics support" }
       ]
+    },
+    "0.9.6.0": {
+      "add": [{ "source": "data_sources/cqp.txt", "destination": "data/cqp.txt" ,"description": "New feature: CA QSO party" }
+    ],
+      "delete": [],
+      "modify": []
     }
 }
