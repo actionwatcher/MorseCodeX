@@ -408,7 +408,7 @@ class MorseCodeXUI:
         self.session_frame = ttk.Frame(self.root)
         self.session_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.tree = ttk.Treeview(self.session_frame, columns=('score', 'date'), show='headings')
+        self.tree = ttk.Treeview(self.session_frame, columns=('score', 'date', 'source'), show='headings')
         def create_handler(sort_by):
             def handler():
                 if self.sort_by == sort_by:
@@ -420,6 +420,7 @@ class MorseCodeXUI:
             return handler
         self.tree.heading('score', text='Score', command=create_handler('score'))
         self.tree.heading('date', text='Date', command=create_handler('date'))
+        self.tree.heading('source', text='Source', command=create_handler('source_name'))
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         scrollbar = ttk.Scrollbar(self.session_frame, orient=tk.VERTICAL, command=self.tree.yview)
@@ -492,7 +493,7 @@ class MorseCodeXUI:
             self.tree.delete(item)
         sessions = self.session_db.get_sorted_sessions(sort_by=sort_by, ascending=self.sort_inverted)
         for session in sessions:
-            self.tree.insert('', tk.END, values=(session.score, session.date))
+            self.tree.insert('', tk.END, values=(session.score, session.date, session.source_name))
 
     def on_click(self, event):
         try:
