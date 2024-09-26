@@ -145,6 +145,8 @@ class MorseCodeXUI:
         self.file_select_button.grid(row=0, column=2, padx=5, pady=5)
         checkbox1 = ttk.Checkbutton(source_frame, text="Challenge me", variable=self.use_challenge)
         checkbox1.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
+        self.statiscs_button = Button(source_frame, text="Stats", command=self.create_stat_screen)
+        self.statiscs_button.grid(row=1, sticky = tk.E, column=2, padx=5, pady=5)
         
         # Message Option
         checkbox2 = ttk.Checkbutton(option_frame, text="SerNumber", variable=self.generate_ser_num)
@@ -518,6 +520,68 @@ class MorseCodeXUI:
                 else:
                     t = 'incorrect'
                 self.pair_tree.insert('', tk.END, values=(received, sent, speed, float(duration)), tags=t)
+    
+    def create_stat_screen(self):
+        # Create a new window
+        stat_window = tk.Toplevel(self.root)
+        stat_window.title("Statistics")
+        stat_window.geometry("300x250")  # Width x Height
+        
+        #Frames
+        source_frame = ttk.LabelFrame(stat_window, text="Select Source")
+        stat_frame = ttk.LabelFrame(stat_window, text="Statistics")
+        #Positioning
+        source_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        stat_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        
+        # Source frame
+        ttk.Label(source_frame, text="Source:").grid(row=0, column=0, padx=5, pady=5)
+        sources = self.session_db.get_sources()
+        print(sources)
+
+        source_selector = ttk.Combobox(source_frame, values=sources, state='readonly')
+        source_selector.grid(row=0, column=1, padx=5, pady=5)
+        def update_stats(event):
+            selected_source = source_selector.get()
+            print("You selected:", selected_source)
+
+            def speed_for_threshold(hist, thres):
+                speed = hist[0][0]
+                for speed_, val in hist:
+                    if (val > thres):
+                        break
+                    speed = speed_
+                return speed
+
+            total_count, cum_hist = self.session_db.get_histogram(selected_source)
+            if total_count and cum_hist:
+                sustained_speed = speed_for_threshold(cum_hist, 0.03)
+                max_speed = speed_for_threshold(cum_hist, 0.25)
+                a = 10 
+                b = 1./110
+                reliability = round(100*(1 + a * np.exp(-b * 500))*(1 / (1 + a * np.exp(-b *total_count)) - 1 / (1 + a)))
+            else:
+                sustained_speed = None
+                max_speed = None
+                reliability = 0
+            sustained_label.config(text=f"Sustained speed:\t{sustained_speed}")
+            max_label.config(text=f"Maximum speed:\t{max_speed}")
+            reliability_label.config(text=f"Estimate reliability:\t{reliability}%")
+        source_selector.bind("<<ComboboxSelected>>", update_stats)
+        
+        #stat frame
+        sustained_speed = None
+        max_speed = None
+        reliability = 0
+        sustained_label = ttk.Label(stat_frame, text=f"Sustained speed:\t{sustained_speed}")
+        sustained_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        max_label = ttk.Label(stat_frame, text=f"Maximum speed:\t{max_speed}")
+        max_label.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        reliability_label = ttk.Label(stat_frame, text=f"Estimate reliability:\t{reliability}")
+        reliability_label.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+
+        close_button = Button(stat_window, text="Close", command=stat_window.destroy)
+        close_button.grid(row = 3, column = 0, pady=10)
 
     def play_volume_test(self):
         if not self.start_enabled:

@@ -1,5 +1,6 @@
 import sqlite3
 from helpers import log
+from collections import Counter
 
 class Session:
     def __init__(self, date, source_name, volume=0.0, noise=0.0, qrn=0.0, qrm=0.0, mode=0, items=None, score=0):
@@ -198,6 +199,41 @@ class SessionDB:
 
             return version_data
 
+    def get_histogram(self, source_name):
+        #Calculate number of items for the source
+        query = '''
+        SELECT items.received, items.sent, items.speed
+        FROM items
+        JOIN sessions ON items.session_id = sessions.id
+        WHERE sessions.source_name = ?
+        '''
+        rows = self.conn.execute(query, (source_name,)).fetchall()
+        total_count = len(rows)
+
+        # find errors and related speeds
+        query = '''
+        SELECT items.speed
+        FROM items
+        JOIN sessions ON items.session_id = sessions.id
+        WHERE sessions.source_name = ?
+        AND items.received != items.sent
+        ORDER BY items.speed;
+        '''
+        failed_speeds = self.conn.execute(query, (source_name,)).fetchall()
+        failed_speeds = [row[0] for row in failed_speeds]  # row[0] = speed
+
+        # Calculate the histogram (frequency of each speed value)
+        speed_histogram = Counter(failed_speeds)
+        sorted_histogram = sorted(speed_histogram.items())  # Sort by speed (the key)
+
+        # Calculate the cumulative histogram
+        cumulative_histogram = []
+        cumulative_count = 0
+        for speed, count in sorted_histogram:
+            cumulative_count += count  # Accumulate the counts
+            cumulative_histogram.append((speed, float(cumulative_count) / total_count))  # Scale the cumulative count
+
+        return total_count, cumulative_histogram
 
 def column_exists(conn, table_name, column_name):
     """Check if a column exists in a given table."""
@@ -380,12 +416,14 @@ if __name__ == "__main__":
 
     # Deleting a session
     session_db.delete_session(session_to_delete_date)
-    session_db.get_session(session_to_delete_date)
+    #session_db.get_session(session_to_delete_date)
 
     version = session_db.get_version()
     assert version == (0, 0, 0, 0)
     session_db.set_version((1, 2, 3, 4))
     version = session_db.get_version()
     assert version == (1, 2, 3, 4)
-    convert_v0950('sessions.db')
+    #convert_v0950('sessions.db')
+    s = SessionDB('sessions.db')
+    s.get_histogram('ca_counties.txt')
     
