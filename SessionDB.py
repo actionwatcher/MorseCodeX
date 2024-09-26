@@ -172,6 +172,15 @@ class SessionDB:
                             qrn=qrn, qrm=qrm, mode=mode, score=score, items=items)
 
             return session
+    
+    def get_sources(self, ascending = True):
+        order = 'ASC' if ascending else 'DESC'
+        with self.conn:
+            cursor = self.conn.execute(f'''
+                SELECT name FROM source_names ORDER BY LOWER(name) {order}
+            ''')
+            sources = cursor.fetchall()
+        return [source[0] for source in sources] #untuple
 
     def set_version(self, version_tuple):
         if len(version_tuple) != 4:
