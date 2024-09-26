@@ -25,38 +25,42 @@ class DataSource:
         try:
             ser_num=''
             with open(file_path, 'r') as file:
-                for line_number, line in enumerate(file):
+                first_line = file.readline().strip()
+                if first_line.startswith('!!Order!!'):
+                    format_spec = [field.strip() for field in first_line.split('!!Order!!')[1].split(',') if field.strip()]
+
+                for line in file:
                     line = line.strip()
-                    if line_number == 0 and line.startswith('!!Order!!'):
-                        format_spec = [field.strip() for field in line.split('!!Order!!')[1].split(',') if field.strip()]
-                    elif line and not line.startswith('#'):
-                        if format_spec:
-                            fields = line.split(',')
-                            if len(fields) < len(format_spec):
-                                fields.extend([''] * (len(format_spec) - len(fields)))
-                            word_dict = {key: value for key, value in zip(format_spec, fields)}
+                    if not line or line.startswith('#'):
+                        continue
+                    
+                    if format_spec: # formatted (usually call history)
+                        fields = line.split(',')
+                        if len(fields) < len(format_spec):
+                            fields.extend([''] * (len(format_spec) - len(fields)))
+                        word_dict = {key: value for key, value in zip(format_spec, fields)}
 
-                            # Handling empty Name field (empty string '')
-                            if 'Name' in word_dict and word_dict['Name'] == '':
-                                word_dict['Name'] = random.choice(default_names)
-                            elif word_dict['Name'] not in default_names:
-                                default_names.append(word_dict['Name'])
+                        # Handling empty Name field (empty string '')
+                        if 'Name' in word_dict and word_dict['Name'] == '':
+                            word_dict['Name'] = random.choice(default_names)
+                        elif word_dict['Name'] not in default_names:
+                            default_names.append(word_dict['Name'])
 
-                            combined_string = ' '.join(
-                                word_dict[field] for field in format_spec if field not in ('Call', 'UserText')
-                            )
-                            words.append(combined_string)
-                        else:
-                            words.append(line)
-                        
-                        if self.generate_sernum:
-                                ser_num = str(random.randint(1, 1300)) + ' '
-                                if random.choice([0, 1, 2]) == 0: # in 1/3 cases
-                                    ser_num = ser_num.replace('1', 'a').replace('9', 'n').replace('0', 't')
-                                else: # zero fill
-                                    while(len(ser_num)<4):
-                                        ser_num = 't' + ser_num
-                                self.serial_numbers.append(ser_num)
+                        combined_string = ' '.join(
+                            word_dict[field] for field in format_spec if field not in ('Call', 'UserText')
+                        )
+                        words.append(combined_string)
+                    else: # custom or spc no formatting
+                        words.append(line)
+                    
+                    if self.generate_sernum:
+                            ser_num = str(random.randint(1, 1300)) + ' '
+                            if random.choice([0, 1, 2]) == 0: # in 1/3 cases
+                                ser_num = ser_num.replace('1', 'a').replace('9', 'n').replace('0', 't')
+                            else: # zero fill
+                                while(len(ser_num)<4):
+                                    ser_num = 't' + ser_num
+                            self.serial_numbers.append(ser_num)
         except FileNotFoundError:
             log("error", f"File {file_path} not found.")
         return words
@@ -89,18 +93,24 @@ class DataSource:
         return (pre_msg, self.rst, ser_num, msg)
 
 if __name__ == '__main__':
-    data_source = DataSource(file_path='MASTER.SCP', num_words=10)
+    data_source = DataSource(file_path='data_sources/MASTER.SCP', num_words=10)
     print('Testing super-check partial file with MASTER.SCP')
     for _ in range(5):
         print(data_source.get_next_word())
     
-    data_source = DataSource(file_path='NAQPCW.txt', num_words=10, pre_message=True)
+    data_source = DataSource(file_path='data_sources/NAQPCW.txt', num_words=10, pre_message=True)
     print('Testing super-check partial file with NAQPCW.txt')
     for _ in range(5):
         print(data_source.get_next_word())
 
 
-    data_source = DataSource(file_path='NAQPCW.txt', num_words=10, pre_message=True, serial=True)
+    data_source = DataSource(file_path='data_sources/NAQPCW.txt', num_words=10, pre_message=True, serial=True)
     print('Testing super-check partial file with NAQPCW.txt')
+    for _ in range(5):
+        print(data_source.get_next_word())
+
+
+    data_source = DataSource(file_path='data_sources/CWOPS_3600-DDD.txt', num_words=10, pre_message=True, serial=True)
+    print('Testing super-check partial file with CWOPS.txt')
     for _ in range(5):
         print(data_source.get_next_word())
