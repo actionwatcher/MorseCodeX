@@ -13,7 +13,8 @@ a = Analysis(
         ('data_sources/CWOPS_3600-DDD.txt', './data_sources'), ('data_sources/MASUSVE.SCP', './data_sources'),
         ('data_sources/NAQPCW.txt', './data_sources'), ('data_sources/ca_counties.txt', './data_sources'),
         ('data_sources/MASTERDX.SCP', './data_sources'), ('data_sources/states_provinces.txt', './data_sources'),
-        ('data_sources/letters.txt', './data_sources'), ('data_sources/cqp.txt', './data_sources')
+        ('data_sources/letters.txt', './data_sources'), ('data_sources/cqp.txt', './data_sources'),
+        ('data_sources/arrl_sweepstakes.txt', './data_sources'), ('configs/message_policies.json', './configs')
         ],
     hiddenimports=[],
     hookspath=[],
@@ -59,7 +60,7 @@ app = BUNDLE(
     icon='MorseCodeX.ico',
     bundle_identifier=None,
     info_plist={
-	'CFBundleShortVersionString': '1.0.0.0'
+	'CFBundleShortVersionString': '1.0.0.1'
     }
 	
 )

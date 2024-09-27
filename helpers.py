@@ -189,6 +189,15 @@ def update_data(old_version: str, new_version: str, migration_file, src_dir, dst
     log('debug', f'Data update complete with {result}')
     return result
 
+def load_json(json_file):
+    try:
+        with open(json_file, "r") as file:
+            json_dict = json.load(file)
+
+    except Exception as e:
+        log('error', e)
+        json_dict = {}
+    return json_dict
 
 # logging 
 from tkinter import messagebox
@@ -264,3 +273,5 @@ if __name__ == "__main__":
         vol = slider2source(slider, obj)
         n1 = volume2value(vol)
         assert n == n1, f"Initial: {n}, roundtripped: {n1}, with volume {vol}"
+
+    load_json('message_json_dict.json')

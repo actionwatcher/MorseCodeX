@@ -1,5 +1,13 @@
 {
-    "0.9.4.0": {
+  "1.0.0.1": {
+    "add": [
+      { "source": "data_sources/arrl_sweepstakes.txt", "destination": "data/arrl_sweepstakes.txt" ,"description": "New feature: ARRL_SS" },
+      { "source": "configs/message_policies.json", "destination": "configs/message_policies.json" ,"description": "New feature: msg forming policies" }    
+  ],
+    "delete": [],
+    "modify": []
+  },
+  "0.9.4.0": {
       "add": [
         { "source": "configs/kbd_mapping.txt", "destination": "configs/kbd_mapping.txt" ,"description": "New feature: keyboard mapping" },
         { "source": "configs/qrn.wav", "destination": "configs/qrn.wav" ,"description": "Config change: location change" },

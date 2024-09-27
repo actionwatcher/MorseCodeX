@@ -1,8 +1,10 @@
 import random
+import os
 from helpers import log
+import helpers
 
 class DataSource:
-    def __init__(self, file_path='MASTER.SCP', num_words=50, pre_message=False, rst=False, serial=False, challenges={}, challenge_frac=0.25):
+    def __init__(self, file_path='MASTER.SCP', num_words=50, policies_file = 'message_policies.json', pre_message=False, rst=False, serial=False, challenges={}, challenge_frac=0.25):
         self.num_challenges = min(int(round(challenge_frac * num_words)), len(challenges))
         self.num_words = num_words - self.num_challenges
         self.rst = '5nn ' if rst else ''
@@ -12,43 +14,57 @@ class DataSource:
         if pre_message:
             self.pre_msgs_selection = ('tu ,'*20+','*8+'r ,'*4+'qsl ,'+'ur ,'*3).split(',')
         self.generate_sernum = serial
+        self.policies = helpers.load_json(policies_file)
         self.msgs = self._load_words(file_path)
         self.challenge_list = list(challenges.keys())
         self.challenge_freq = [ max(1, val) for val in challenges.values()] # chance is proportional to number of erros
                                                                             # 0 will not include value so replace 0s with 1
+        
         self.reset()
         
     def _load_words(self, file_path):
         words = []
         format_spec = None
-        default_names = ['Joe', 'John', 'Nick', 'Mike', 'Geo'] #in case if no name yet present in the dictionalry
         try:
             ser_num=''
             with open(file_path, 'r') as file:
-                first_line = file.readline().strip()
-                if first_line.startswith('!!Order!!'):
-                    format_spec = [field.strip() for field in first_line.split('!!Order!!')[1].split(',') if field.strip()]
+                for line in file: #this will skip first line of actual data, that is ok
+                    line = line.strip()
+                    if line.startswith('!!Order!!'):
+                        format_spec = [field.strip().lower() for field in line.split('!!Order!!')[1].split(',') if field.strip()]
+                    elif not line.startswith("#"):
+                        break
+                
+                key = os.path.basename(file_path)
+                msg_fields, policy = create_policy(format_spec, self.policies, key)
+                if msg_fields and format_spec:
+                    missing_fields = list(set(msg_fields) - set(format_spec))
+                    format_spec += missing_fields #add missing fields
+                else:
+                    missing_fields = []
 
                 for line in file:
                     line = line.strip()
                     if not line or line.startswith('#'):
                         continue
                     
-                    if format_spec: # formatted (usually call history)
+                    if msg_fields: # formatted (usually call history)
                         fields = line.split(',')
                         if len(fields) < len(format_spec):
                             fields.extend([''] * (len(format_spec) - len(fields)))
                         word_dict = {key: value for key, value in zip(format_spec, fields)}
+                        for field in missing_fields:
+                            on_missing = policy[field]["on_missing"]
+                            if on_missing == 'skip':
+                                continue
+                            elif on_missing == 'default':
+                                word_dict[field] = random.choice(policy[field]["default_value"])
 
-                        # Handling empty Name field (empty string '')
-                        if 'Name' in word_dict and word_dict['Name'] == '':
-                            word_dict['Name'] = random.choice(default_names)
-                        elif word_dict['Name'] not in default_names:
-                            default_names.append(word_dict['Name'])
+                        msg_lst = [word_dict[field] for field in msg_fields]
+                        if not all(msg_lst):
+                            continue
 
-                        combined_string = ' '.join(
-                            word_dict[field] for field in format_spec if field not in ('Call', 'UserText')
-                        )
+                        combined_string = ' '.join(msg_lst)
                         words.append(combined_string)
                     else: # custom or spc no formatting
                         words.append(line)
@@ -92,25 +108,53 @@ class DataSource:
         self.index += 1
         return (pre_msg, self.rst, ser_num, msg)
 
+def create_policy(format_spec, policies, key):
+    required = []
+    policy = None
+    has_policy = policies and key in policies.keys()
+    if format_spec and has_policy: # found appropriate policy
+        policy_format = [v[0] for v in sorted(policies[key].items(), key = lambda v: v[1]['position']) if v[1]['position'] >= 0]
+        policy = policies[key]
+        required = [v[0] for v in sorted(policy.items(), key = lambda v: v[1]['msg_position']) if int(v[1]['msg_position']) >= 0]
+        if sorted(policy_format) != sorted(format_spec) and not set(required).issubset(format_spec):
+            log("warning", f"{key} format not matching policy use default")
+            policy = policies['exclusive']
+            required = [f for f in format_spec if f not in policy.keys()]
+            #required = [v[0] for v in sorted(policy.items(), key = lambda v: v[1]['msg_position']) if int(v[1]['msg_position']) >= 0]
+    elif has_policy and not format_spec:
+        policy = policies[key]
+        required = [v[0] for v in sorted(policy.items(), key = lambda v: v[1]['msg_position']) if int(v[1]['msg_position']) >= 0]
+    elif not has_policy and format_spec:
+        #use default policy
+        policy = policies['exclusive']
+        required = [f for f in format_spec if f not in policy.keys()]
+    
+    return required, policy
+
 if __name__ == '__main__':
-    data_source = DataSource(file_path='data_sources/MASTER.SCP', num_words=10)
+    data_source = DataSource(file_path='data_sources/MASTER.SCP', policies_file = 'configs/message_policies.json', num_words=10)
     print('Testing super-check partial file with MASTER.SCP')
     for _ in range(5):
         print(data_source.get_next_word())
     
-    data_source = DataSource(file_path='data_sources/NAQPCW.txt', num_words=10, pre_message=True)
-    print('Testing super-check partial file with NAQPCW.txt')
+    data_source = DataSource(file_path='data_sources/NAQPCW.txt', policies_file = 'configs/message_policies.json', num_words=10, pre_message=True)
+    print('Testing Testing call history file with NAQPCW.txt')
     for _ in range(5):
         print(data_source.get_next_word())
 
 
-    data_source = DataSource(file_path='data_sources/NAQPCW.txt', num_words=10, pre_message=True, serial=True)
-    print('Testing super-check partial file with NAQPCW.txt')
+    data_source = DataSource(file_path='data_sources/NAQPCW.txt', policies_file = 'configs/message_policies.json', num_words=10, pre_message=True, serial=True)
+    print('Testing sTesting call history file with NAQPCW.txt')
     for _ in range(5):
         print(data_source.get_next_word())
 
 
-    data_source = DataSource(file_path='data_sources/CWOPS_3600-DDD.txt', num_words=10, pre_message=True, serial=True)
-    print('Testing super-check partial file with CWOPS.txt')
+    data_source = DataSource(file_path='data_sources/CWOPS_3600-DDD.txt', policies_file = 'configs/message_policies.json', num_words=10, pre_message=True, serial=True)
+    print('Testing sTesting call history file with CWOPS.txt')
+    for _ in range(5):
+        print(data_source.get_next_word())
+
+    data_source = DataSource(file_path='data_sources/arrl_sweepstakes.txt', policies_file = 'configs/message_policies.json', num_words=10, pre_message=True, serial=True)
+    print('Testing call history file with arrl_sweepstakes.txt')
     for _ in range(5):
         print(data_source.get_next_word())

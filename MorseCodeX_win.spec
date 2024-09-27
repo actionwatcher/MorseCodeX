@@ -14,6 +14,7 @@ a = Analysis(
         ('data_sources/NAQPCW.txt', './data_sources'), ('data_sources/ca_counties.txt', './data_sources'),
         ('data_sources/MASTERDX.SCP', './data_sources'), ('data_sources/states_provinces.txt', './data_sources'),
         ('data_sources/letters.txt', './data_sources'), ('data_sources/cqp.txt', './data_sources'),
+        ('data_sources/arrl_sweepstakes.txt', './data_sources'), ('configs/message_policies.json', './configs'),
         ('MorseCodeX.ico', './')
         ],
     hiddenimports=[],
