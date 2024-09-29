@@ -160,8 +160,7 @@ class MorseSoundSource:
         else:
             return 0
     
-    def get_audio_segment(self, duration):
-        size = int(self.sample_rate * duration)
+    def get_audio_segment(self, size):
         result = np.zeros(size, dtype=np.float32)
         filled = 0
 

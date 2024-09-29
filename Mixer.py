@@ -33,7 +33,7 @@ class Mixer:
             for source in self.sources:
                 if not source.active:
                     continue
-                audio_segment = source.get_audio_segment(self.interval)
+                audio_segment = source.get_audio_segment(self.interval_samples)
                 #if mixed_audio.shape == audio_segment.shape:
                 mixed_audio += audio_segment
             self.queue.put(mixed_audio)

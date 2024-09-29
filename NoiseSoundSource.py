@@ -46,12 +46,10 @@ class NoiseSoundSource:
         self.activate()
         self.source_audio_segment = self.source_audio_segment__ * self._volume
 
-    def get_audio_segment(self, duration):
+    def get_audio_segment(self, segment_length):
         if not self.active:
-            return np.zeros(int(duration * self.sample_rate))
-        
-        segment_length = int(duration * self.sample_rate)
-        
+            return np.zeros(isegment_length)
+                
         start_position = self.current_position
         end_position = (self.current_position + segment_length) % self.source_segment_length
 
