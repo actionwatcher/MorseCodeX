@@ -451,7 +451,7 @@ class MorseCodeXUI:
 
     def create_details_frame(self):
         s = ttk.Style()
-        s.configure('Treeview.Heading', foreground="black", background="green3")
+        s.configure('Treeview.Heading', foreground="black")
         self.detail_frame = ttk.Frame(self.root)
         self.detail_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -699,12 +699,14 @@ else: # python
     bin_path = os.path.abspath(".")
     helpers.init_log('debug')
 
+icon_file = os.path.join(bin_path, 'MorseCodeX.ico')
 if platform.system() == 'Darwin':
     base_path = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MorseCodeX')
 elif platform.system() == 'Windows':
     base_path = os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'MorseCodeX')
 elif platform.system() == 'Linux':
     base_path = os.path.join(os.path.expanduser('~'), '.MorseCodeX')
+    icon_file = ''
 else:
     log('error', 'Unsupported platform')
     sys.exit()
@@ -748,6 +750,6 @@ if os.path.exists(guard_file):
     os.remove(guard_file)
 
 root = tk.Tk()
-root.iconbitmap(os.path.join(bin_path, 'MorseCodex.ico'))
+root.iconbitmap(bitmap=icon_file)
 app = MorseCodeXUI(root, compare, config_path = config_path, data_path = data_path)
 root.mainloop()
