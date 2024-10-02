@@ -1,5 +1,4 @@
 import numpy as np
-import sounddevice as sd
 import queue
 import json
 from helpers import log

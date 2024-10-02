@@ -1,9 +1,4 @@
 import numpy as np
-import sounddevice as sd
-from time import sleep, time
-import threading
-from queue import Queue
-from CircularBuffer import CircularBuffer
 import helpers
 
 class NoiseSoundSource:
@@ -48,7 +43,7 @@ class NoiseSoundSource:
 
     def get_audio_segment(self, segment_length):
         if not self.active:
-            return np.zeros(isegment_length)
+            return np.zeros(segment_length)
                 
         start_position = self.current_position
         end_position = (self.current_position + segment_length) % self.source_segment_length
