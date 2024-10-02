@@ -1,0 +1,14 @@
+{
+    "arrl_sweepstakes.txt": {
+        "call": {"position": 0, "msg_position": 1},
+        "prec": {"position": -1, "msg_position": 0, "on_missing": "default", "default_value": ["Q", "A", "B", "U", "M", "S"]},
+        "sect": {"position": 1, "msg_position": 3, "on_missing": "skip"},
+        "state": {"position": 3, "msg_position": -1, "on_missing": "skip"},
+        "ck": {"position": 4, "msg_position": 2, "on_missing": "skip", "default_value": ["Joe", "John", "Nick", "Ark", "Geo"]},
+        "usertext": {"position": 5, "msg_position": -1}
+    },
+    "exclusive": {
+        "call": {"msg_position": 0},
+        "usertext": {"msg_position": 1}
+    }
+}
