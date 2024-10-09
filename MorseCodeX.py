@@ -95,6 +95,7 @@ class MorseCodeXUI:
             self.qrm_volume = settings.get('qrm_volume', 0)
             self.sort_by = settings.get('sort_by', 'score')
             self.sort_inverted = settings.get('sort_inverted', False)
+            self.signal_cnt = tk.IntVar(value = settings.get('signal_cnt', 1))
 
 
     def save_settings(self):
@@ -118,6 +119,7 @@ class MorseCodeXUI:
             settings['qrn_volume'] = self.qrn_source.volume 
             settings['sort_by'] = self.sort_by
             settings['sort_inverted'] = self.sort_inverted
+            settings['signal_cnt'] = self.signal_cnt.get()
             
     def create_start_screen(self):
         for widget in self.root.winfo_children():
@@ -128,25 +130,36 @@ class MorseCodeXUI:
 
         # File selection at the top, aligned to the left
         source_frame = ttk.LabelFrame(start_frame, text="Message Source")
+        source_subframe = ttk.Frame(source_frame)
         option_frame = ttk.LabelFrame(start_frame, text="Message Options")
         param_frame = ttk.LabelFrame(start_frame, text="Training parameters")
         sound_frame = self.create_sound_frame(start_frame, test_button=True)
 
         
         source_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        source_subframe.grid(row=1, column=0, columnspan=2, padx=0, pady=0, sticky="nsew")
         option_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
         param_frame.grid(row=1, column=0, padx=5, pady=5, sticky="w")
         sound_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
         
         # Message Source
         self.file_path_entry = ttk.Entry(source_frame, textvariable=self.data_source_file, width=30)
-        self.file_path_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.file_path_entry.grid(row=0, column=0, padx=5, pady=5)
         self.file_select_button = Button(source_frame, text="Browse", command=self.select_source_file)
-        self.file_select_button.grid(row=0, column=2, padx=5, pady=5)
-        checkbox1 = ttk.Checkbutton(source_frame, text="Challenge me", variable=self.use_challenge)
+        self.file_select_button.grid(row=0, column=1, padx=5, pady=5)
+        checkbox1 = ttk.Checkbutton(source_subframe, text="Challenge me", variable=self.use_challenge)
         checkbox1.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
-        self.statiscs_button = Button(source_frame, text="Stats", command=self.create_stat_screen)
-        self.statiscs_button.grid(row=1, sticky = tk.E, column=2, padx=5, pady=5)
+        pileup_checker = helpers.range_checker(1, 5)
+        validate_pileup_sb = root.register(pileup_checker)
+        self.pileup_sb = tk.Spinbox(source_subframe, from_=1, to=5, width=1,
+                                        wrap=False, textvariable=self.signal_cnt,
+                                        validate="key", validatecommand=(validate_pileup_sb, '%P')
+                                        )
+        self.pileup_sb.grid(row=1, column=3, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(source_subframe, text="# of signals").grid(row=1, column=4, sticky=tk.W, padx=5, pady=5)
+        source_subframe.columnconfigure(5, weight=1)  # Right column (expandable)
+        self.statiscs_button = Button(source_subframe, text="Stats", command=self.create_stat_screen)
+        self.statiscs_button.grid(row=1, sticky = tk.E, column=5, padx=5, pady=5)
         
         # Message Option
         checkbox2 = ttk.Checkbutton(option_frame, text="SerNumber", variable=self.generate_ser_num)
