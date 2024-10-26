@@ -52,5 +52,9 @@ Ser Num checkbox will allow sending random numbers with both cut and full number
 
 Latest Release
 
-V1.0.0.0
+V1.1.0.0
+
+Supports message forming policies, thus expanding support for number of contest exchanges. ARRL Sweepstake added by default. Supports extended statistics that accumulated across session and reports sustaning speed - errors below 3% threshold and max speed with errors above 25% threshold.
+
+Mac: 2cb40bc61a5fd1983e1646537c4dee841efc3165664117eb352cf082e1f61d67  MorseCodeX.zip
 
