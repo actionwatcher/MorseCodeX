@@ -60,7 +60,7 @@ app = BUNDLE(
     icon='MorseCodeX.ico',
     bundle_identifier=None,
     info_plist={
-	'CFBundleShortVersionString': '1.0.0.1'
+	'CFBundleShortVersionString': '1.1.0.0'
     }
 	
 )
