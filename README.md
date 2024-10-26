@@ -57,4 +57,5 @@ V1.1.0.0
 Supports message forming policies, thus expanding support for number of contest exchanges. ARRL Sweepstake added by default. Supports extended statistics that accumulated across session and reports sustaning speed - errors below 3% threshold and max speed with errors above 25% threshold.
 
 Mac: 2cb40bc61a5fd1983e1646537c4dee841efc3165664117eb352cf082e1f61d67  MorseCodeX.zip
+Windows: c02a101ea93499c7a19a45548efe125d2f82a8047bc29f7d34e24f08ac0b4c30 MorseCodeX.zip
 
