@@ -99,6 +99,7 @@ class MorseCodeXUI:
             self.sort_by = settings.get('sort_by', 'score')
             self.sort_inverted = settings.get('sort_inverted', False)
             self.signal_cnt = tk.IntVar(value = settings.get('signal_cnt', 1))
+            self.timing_spread = tk.DoubleVar(value=settings.get('timing_spread', 0.2))
 
 
     def save_settings(self):
@@ -123,6 +124,7 @@ class MorseCodeXUI:
             settings['sort_by'] = self.sort_by
             settings['sort_inverted'] = self.sort_inverted
             settings['signal_cnt'] = self.signal_cnt.get()
+            settings['timing_spread'] = self.timing_spread.get()
             
     def create_start_screen(self):
         for widget in self.root.winfo_children():
@@ -150,16 +152,26 @@ class MorseCodeXUI:
         self.file_path_entry.grid(row=0, column=0, padx=5, pady=5)
         self.file_select_button = Button(source_frame, text="Browse", command=self.select_source_file)
         self.file_select_button.grid(row=0, column=1, padx=5, pady=5)
-        checkbox1 = ttk.Checkbutton(source_subframe, text="Challenge me", variable=self.use_challenge)
-        checkbox1.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
+        checkbox1 = ttk.Checkbutton(source_subframe, variable=self.use_challenge)
+        checkbox1.grid(row=1, column=0, sticky=tk.E, padx=5, pady=5)
+        ttk.Label(source_subframe, text="Challenge me").grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
         pileup_checker = helpers.range_checker(1, 5)
         validate_pileup_sb = root.register(pileup_checker)
         self.pileup_sb = tk.Spinbox(source_subframe, from_=1, to=5, width=1,
                                         wrap=False, textvariable=self.signal_cnt,
                                         validate="key", validatecommand=(validate_pileup_sb, '%P')
                                         )
-        self.pileup_sb.grid(row=1, column=3, sticky=tk.W, padx=5, pady=5)
-        ttk.Label(source_subframe, text="# of signals").grid(row=1, column=4, sticky=tk.W, padx=5, pady=5)
+        self.pileup_sb.grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(source_subframe, text="# of signals").grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
+        timing_spread_checker = helpers.range_checker(0.0, 0.5)
+        validate_timing_spread = root.register(timing_spread_checker)
+        self.spread_sb = tk.Spinbox(source_subframe, from_=0.0, to=1.0, width=3,
+                                        increment=0.1, format="%.1f",
+                                        wrap=False, textvariable=self.timing_spread,
+                                        validate="key", validatecommand=(validate_timing_spread, '%P')
+                                        )
+        self.spread_sb.grid(row=2, column=2, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(source_subframe, text="signal spread").grid(row=2, column=3, sticky=tk.W, padx=5, pady=5)
         source_subframe.columnconfigure(5, weight=1)  # Right column (expandable)
         self.statiscs_button = Button(source_subframe, text="Stats", command=self.create_stat_screen)
         self.statiscs_button.grid(row=1, sticky = tk.E, column=5, padx=5, pady=5)
@@ -717,8 +729,10 @@ class MorseCodeXUI:
         else: 
             self.speed_increase = False
             msg = None
-        for msg, s in zip(self.msgs, self.morse_sources):
-            threading.Timer(delay, s.play_string, args=[msg]).start()
+
+        delays = np.random.random(self.signal_cnt.get()) * self.timing_spread.get()
+        for msg, s, d in zip(self.msgs, self.morse_sources, delays):
+            threading.Timer(delay + d, s.play_string, args=[msg]).start()
 
     def stop_qrm(self):
         if self.qrm_thread:

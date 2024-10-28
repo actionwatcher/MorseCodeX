@@ -73,7 +73,7 @@ def genererate_score_multipliers(speed_range):
 
 def range_checker(lower, upper):
     def binded_checker(val):
-        if val.isdigit() and lower <= int(val) <= upper:
+        if val.isdigit() and lower <= float(val) <= upper:
             return True
         return False
     return binded_checker
