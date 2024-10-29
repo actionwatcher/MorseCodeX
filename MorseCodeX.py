@@ -171,7 +171,7 @@ class MorseCodeXUI:
                                         validate="key", validatecommand=(validate_timing_spread, '%P')
                                         )
         self.spread_sb.grid(row=2, column=2, sticky=tk.W, padx=5, pady=5)
-        ttk.Label(source_subframe, text="signal spread").grid(row=2, column=3, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(source_subframe, text="Time Offset").grid(row=2, column=3, sticky=tk.W, padx=5, pady=5)
         source_subframe.columnconfigure(5, weight=1)  # Right column (expandable)
         self.statiscs_button = Button(source_subframe, text="Stats", command=self.create_stat_screen)
         self.statiscs_button.grid(row=1, sticky = tk.E, column=5, padx=5, pady=5)
@@ -663,11 +663,19 @@ class MorseCodeXUI:
         received_text = self.entry_field.get().upper().strip()
         self.entry_field.delete(0, tk.END)
         strict_check = self.signal_cnt.get() > 1
+        current_score = 0
+        best_match_idx = 0
         for i in range(self.signal_cnt.get()):
-            sent_text = self.ser_num[i].upper() + self.sent_word[i].upper().strip()
-            successfully_received, score = self.compare_function(sent_text, received_text, self.shortcuts)
+            sent_text_ = self.ser_num[i].upper() + self.sent_word[i].upper().strip()
+            successfully_received, score = self.compare_function(sent_text_, received_text, self.shortcuts)
             if successfully_received:
+                best_match_idx = i
+                sent_text = sent_text_
                 break
+            if score > current_score:
+                current_score = score
+                best_match_idx = i
+                sent_text = sent_text_
         if self.signal_cnt.get() > 1 and not successfully_received: 
             score = 0 # strict score policy for pileup training
         mult = self.score_multipliers[self.current_speed - self.speed_range[0]]
@@ -681,12 +689,12 @@ class MorseCodeXUI:
             c = 'green'
             if self.speed_increase: # first receive was correct
                 self.current_speed = min(self.current_speed + 1, self.max_speed.get())
-                self.remove_challenge(self.sent_word)
+                self.remove_challenge(self.sent_word[best_match_idx])
             self.speed_increase = True
         else:
             c = 'red'
             self.current_speed = max(self.current_speed - 1, self.init_speed.get())
-            self.add_challenge(self.sent_word)
+            self.add_challenge(self.sent_word[best_match_idx])
         self.received_text.config(text=received_text, fg=c)
         self.sent_text.config(text=sent_text)
         for s in self.morse_sources:
