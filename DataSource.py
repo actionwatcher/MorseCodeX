@@ -30,6 +30,8 @@ class DataSource:
             with open(file_path, 'r') as file:
                 for line in file: #this will skip first line of actual data, that is ok
                     line = line.strip()
+                    if not line:
+                        continue
                     if line.startswith('!!Order!!'):
                         format_spec = [field.strip().lower() for field in line.split('!!Order!!')[1].split(',') if field.strip()]
                     elif not line.startswith("#"):
