@@ -27,7 +27,7 @@ from helpers import log
 
 class MorseCodeXUI:
     shortcuts = {'T':'0', 'A':'1', 'N':'9'}
-    speed_range = [10, 65] #WPM
+    speed_range = [10, 90] #WPM
     score_multipliers = helpers.genererate_score_multipliers(speed_range)
     default_kbd_shortcuts = {'repeat': ('<F6>', 1)}
 
@@ -662,20 +662,20 @@ class MorseCodeXUI:
     def process_entry(self, event, delay=1):
         received_text = self.entry_field.get().upper().strip()
         self.entry_field.delete(0, tk.END)
-        strict_check = self.signal_cnt.get() > 1
         current_score = 0
         best_match_idx = 0
+        sent_text = self.ser_num[0].upper() + self.sent_word[0].upper().strip()
         for i in range(self.signal_cnt.get()):
-            sent_text_ = self.ser_num[i].upper() + self.sent_word[i].upper().strip()
-            successfully_received, score = self.compare_function(sent_text_, received_text, self.shortcuts)
+            current_text = self.ser_num[i].upper() + self.sent_word[i].upper().strip()
+            successfully_received, score = self.compare_function(current_text, received_text, self.shortcuts)
             if successfully_received:
                 best_match_idx = i
-                sent_text = sent_text_
+                sent_text = current_text
                 break
             if score > current_score:
                 current_score = score
                 best_match_idx = i
-                sent_text = sent_text_
+                sent_text = current_text
         if self.signal_cnt.get() > 1 and not successfully_received: 
             score = 0 # strict score policy for pileup training
         mult = self.score_multipliers[self.current_speed - self.speed_range[0]]
