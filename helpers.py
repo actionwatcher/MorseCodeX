@@ -199,6 +199,42 @@ def load_json(json_file):
         json_dict = {}
     return json_dict
 
+# Math
+def get_rand(count, range, separation, exceptions = []):
+    """ generate ranged random numbers with set separation and exeptions"""
+    low = np.random.uniform(range[0], range[0] + separation)
+    high = range[1]
+    if separation >= 1:
+        pool = np.arange(low, high, separation)
+        return np.random.choice(pool, size=count, replace=False)
+    else:
+        return np.random.uniform(low, high, count)
+
+def hz_to_mel(f):
+    """
+    Convert frequency in hz to Mels.
+    
+    Parameters:
+        f (float or np.array): Hz scale value(s)
+    
+    Returns:
+        float or np.array: Corresponding Mel
+    """
+    return 2595 * np.log10(1 + f / 700)
+
+def mel_to_hz(mel):
+    """
+    Convert Mel scale values to frequency (Hz).
+    
+    Parameters:
+        mel (float or np.array): Mel scale value(s)
+    
+    Returns:
+        float or np.array: Corresponding frequency in Hz
+    """
+    return 700 * (10**(mel / 2595) - 1)
+
+
 # logging 
 from tkinter import messagebox
 def null_print(*args):
@@ -275,3 +311,19 @@ if __name__ == "__main__":
         assert n == n1, f"Initial: {n}, roundtripped: {n1}, with volume {vol}"
 
     load_json('message_json_dict.json')
+
+if __name__ == "__main__":
+    mel_values = np.array([0, 500, 1000, 2000, 3000])  # Example Mel values
+    hz_values = mel_to_hz(mel_values)
+    delta = hz_to_mel(hz_values) - mel_values
+    print("Mel:", mel_values)
+    print("Hz:", hz_values)
+    print("Round trip to mel: ", delta)
+    hz_values = np.array([30, 700])
+    mel_range = hz_to_mel(hz_values)
+    print("Range of Mels: ", mel_range) #[47, 780]
+    mels = get_rand(7, mel_range, 0.5)
+    print("Mels: ", mels)
+    freqs = mel_to_hz(mels)
+    freqs.sort()
+    print("Freqs: ", freqs)

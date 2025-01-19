@@ -28,6 +28,7 @@ from helpers import log
 class MorseCodeXUI:
     shortcuts = {'T':'0', 'A':'1', 'N':'9'}
     speed_range = [10, 90] #WPM
+    frequency_range = [40, 600] #Tone frequencies
     score_multipliers = helpers.genererate_score_multipliers(speed_range)
     default_kbd_shortcuts = {'repeat': ('<F6>', 1)}
 
@@ -708,7 +709,10 @@ class MorseCodeXUI:
         self.count_label.config(text=f"Count: {self.received_cnt}")
     
     def get_frequencies(self):
-        freqs = np.random.randint(200, 1000, size=self.signal_cnt.get())
+        mel_range = helpers.hz_to_mel(np.array(self.frequency_range))
+        separation = (mel_range[1] - mel_range[0])/(2.0* self.signal_cnt.get())
+        mels = helpers.get_rand(self.signal_cnt.get(), mel_range, separation)
+        freqs = helpers.mel_to_hz(mels)
         return freqs
 
     def set_sources_freqs(self):
