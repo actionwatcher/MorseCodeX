@@ -28,26 +28,21 @@ class DataSource:
         try:
             ser_num=''
             with open(file_path, 'r') as file:
-                for line in file: #this will skip first line of actual data, that is ok
-                    line = line.strip()
-                    if line.startswith('!!Order!!'):
-                        format_spec = [field.strip().lower() for field in line.split('!!Order!!')[1].split(',') if field.strip()]
-                    elif not line.startswith("#"):
-                        break
-                
                 key = os.path.basename(file_path)
-                msg_fields, policy = create_policy(format_spec, self.policies, key)
-                if msg_fields and format_spec:
-                    missing_fields = list(set(msg_fields) - set(format_spec))
-                    format_spec += missing_fields #add missing fields
-                else:
-                    missing_fields = []
-
+                msg_fields = None
                 for line in file:
-                    line = line.strip()
                     if not line or line.startswith('#'):
                         continue
-                    
+                    if line.startswith('!!Order!!'):
+                        format_spec = [field.strip().lower() for field in line.split('!!Order!!')[1].split(',') if field.strip()]
+                        msg_fields, policy = create_policy(format_spec, self.policies, key)
+                        if msg_fields and format_spec:
+                            missing_fields = list(set(msg_fields) - set(format_spec))
+                            format_spec += missing_fields #add missing fields
+                        else:
+                            missing_fields = []
+
+                    line = line.strip()
                     if msg_fields: # formatted (usually call history)
                         fields = line.split(',')
                         if len(fields) < len(format_spec):

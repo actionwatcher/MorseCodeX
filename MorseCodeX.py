@@ -27,7 +27,8 @@ from helpers import log
 
 class MorseCodeXUI:
     shortcuts = {'T':'0', 'A':'1', 'N':'9'}
-    speed_range = [10, 65] #WPM
+    speed_range = [10, 90] #WPM
+    frequency_range = [40, 600] #Tone frequencies
     score_multipliers = helpers.genererate_score_multipliers(speed_range)
     default_kbd_shortcuts = {'repeat': ('<F6>', 1)}
 
@@ -50,29 +51,32 @@ class MorseCodeXUI:
         if not os.path.exists(os.path.join(self.config_path, 'qrn.wav')):
             log("error", "qrn.wav file was not found")
             sys.exit()
-        audio_segment, sample_rate = helpers.read_wav(os.path.join(self.config_path, 'qrn.wav')) # this file will govern sample rate
-        self.player = Mixer(sample_rate=sample_rate)
-        morse_file = os.path.join(self.config_path, "morse_table.json")
-        self.morse_source = MorseSoundSource(morse_mapping_filename = morse_file, wpm=self.init_speed.get(), frequency=self.frequency, rise_time=self.rise_time, volume=self.cw_volume)
-        self.player.add_source(self.morse_source)
+        audio_segment, self.sample_rate = helpers.read_wav(os.path.join(self.config_path, 'qrn.wav')) # this file will govern sample rate
+        self.player = Mixer(sample_rate=self.sample_rate)
+        self.morse_file = os.path.join(self.config_path, "morse_table.json")
+        self.morse_sources = [MorseSoundSource(morse_mapping_filename = self.morse_file, wpm=self.init_speed.get(), frequency=self.frequency, rise_time=self.rise_time, volume=self.cw_volume)]
+        self.player.add_source(self.morse_sources[0])
+
         qrm_freq = np.random.choice([*range(100, 360, 20), *range(900, 1060, 20)])
-        self.qrm_source = MorseSoundSource(morse_mapping_filename = morse_file, wpm=35, frequency=qrm_freq, rise_time=self.rise_time, volume=self.qrm_volume, queue_sz=1)
+        self.qrm_source = MorseSoundSource(morse_mapping_filename = self.morse_file, wpm=35, frequency=qrm_freq, rise_time=self.rise_time, volume=self.qrm_volume, queue_sz=1)
         self.player.add_source(self.qrm_source)
         
-        noise_duration=float(len(audio_segment))/sample_rate
-        self.qrn_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=sample_rate, 
+        noise_duration=float(len(audio_segment))/self.sample_rate
+        self.qrn_source = NoiseSoundSource(audio_segment=audio_segment, sample_rate=self.sample_rate, 
                                        duration=noise_duration, initial_volume=self.qrn_volume)
         self.player.add_source(self.qrn_source)  # qrn.wav
-        white_noise = np.random.normal(0, 1.0, int(sample_rate * noise_duration))
-        white_noise = helpers.band_pass_filter(white_noise, sampling_rate=sample_rate)
+        white_noise = np.random.normal(0, 1.0, int(self.sample_rate * noise_duration))
+        white_noise = helpers.band_pass_filter(white_noise, sampling_rate=self.sample_rate)
         self.hfnoise_source = NoiseSoundSource(audio_segment=white_noise, duration=noise_duration, 
-                                                   sample_rate=sample_rate, initial_volume=self.hfnoise_volume)
+                                                sample_rate=self.sample_rate, initial_volume=self.hfnoise_volume)
         self.player.add_source(self.hfnoise_source)
         
         self.start_enabled = True
         self.speed_increase = True
         self.qrm_thread = []
         self.create_start_screen()
+        self.msgs = []
+    
 
     def load_settings(self):
         with shelve.open(os.path.join(self.config_path,'settings')) as settings:
@@ -95,6 +99,8 @@ class MorseCodeXUI:
             self.qrm_volume = settings.get('qrm_volume', 0)
             self.sort_by = settings.get('sort_by', 'score')
             self.sort_inverted = settings.get('sort_inverted', False)
+            self.signal_cnt = tk.IntVar(value = settings.get('signal_cnt', 1))
+            self.timing_spread = tk.DoubleVar(value=settings.get('timing_spread', 0.2))
 
 
     def save_settings(self):
@@ -105,7 +111,7 @@ class MorseCodeXUI:
             settings['data_source_file'] = self.data_source_file.get()
             settings['challenge'] = self.use_challenge.get()
             settings['data_source_dir'] = self.data_source_dir
-            settings['cw_volume'] = self.morse_source.volume
+            settings['cw_volume'] = self.morse_sources[0].volume
             settings['softness'] = self.softness
             settings['hfnoise_volume'] = self.hfnoise_source.volume
             settings['ui_width'] = self.ui_width
@@ -118,6 +124,8 @@ class MorseCodeXUI:
             settings['qrn_volume'] = self.qrn_source.volume 
             settings['sort_by'] = self.sort_by
             settings['sort_inverted'] = self.sort_inverted
+            settings['signal_cnt'] = self.signal_cnt.get()
+            settings['timing_spread'] = self.timing_spread.get()
             
     def create_start_screen(self):
         for widget in self.root.winfo_children():
@@ -128,25 +136,46 @@ class MorseCodeXUI:
 
         # File selection at the top, aligned to the left
         source_frame = ttk.LabelFrame(start_frame, text="Message Source")
+        source_subframe = ttk.Frame(source_frame)
         option_frame = ttk.LabelFrame(start_frame, text="Message Options")
         param_frame = ttk.LabelFrame(start_frame, text="Training parameters")
         sound_frame = self.create_sound_frame(start_frame, test_button=True)
 
         
         source_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        source_subframe.grid(row=1, column=0, columnspan=2, padx=0, pady=0, sticky="nsew")
         option_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
         param_frame.grid(row=1, column=0, padx=5, pady=5, sticky="w")
         sound_frame.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
         
         # Message Source
         self.file_path_entry = ttk.Entry(source_frame, textvariable=self.data_source_file, width=30)
-        self.file_path_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.file_path_entry.grid(row=0, column=0, padx=5, pady=5)
         self.file_select_button = Button(source_frame, text="Browse", command=self.select_source_file)
-        self.file_select_button.grid(row=0, column=2, padx=5, pady=5)
-        checkbox1 = ttk.Checkbutton(source_frame, text="Challenge me", variable=self.use_challenge)
-        checkbox1.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
-        self.statiscs_button = Button(source_frame, text="Stats", command=self.create_stat_screen)
-        self.statiscs_button.grid(row=1, sticky = tk.E, column=2, padx=5, pady=5)
+        self.file_select_button.grid(row=0, column=1, padx=5, pady=5)
+        checkbox1 = ttk.Checkbutton(source_subframe, variable=self.use_challenge)
+        checkbox1.grid(row=1, column=0, sticky=tk.E, padx=5, pady=5)
+        ttk.Label(source_subframe, text="Challenge me").grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
+        pileup_checker = helpers.range_checker(1, 5)
+        validate_pileup_sb = root.register(pileup_checker)
+        self.pileup_sb = tk.Spinbox(source_subframe, from_=1, to=5, width=1,
+                                        wrap=False, textvariable=self.signal_cnt,
+                                        validate="key", validatecommand=(validate_pileup_sb, '%P')
+                                        )
+        self.pileup_sb.grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(source_subframe, text="# of signals").grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
+        timing_spread_checker = helpers.range_checker(0.0, 0.5)
+        validate_timing_spread = root.register(timing_spread_checker)
+        self.spread_sb = tk.Spinbox(source_subframe, from_=0.0, to=1.0, width=3,
+                                        increment=0.1, format="%.1f",
+                                        wrap=False, textvariable=self.timing_spread,
+                                        validate="key", validatecommand=(validate_timing_spread, '%P')
+                                        )
+        self.spread_sb.grid(row=2, column=2, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(source_subframe, text="Time Offset").grid(row=2, column=3, sticky=tk.W, padx=5, pady=5)
+        source_subframe.columnconfigure(5, weight=1)  # Right column (expandable)
+        self.statiscs_button = Button(source_subframe, text="Stats", command=self.create_stat_screen)
+        self.statiscs_button.grid(row=1, sticky = tk.E, column=5, padx=5, pady=5)
         
         # Message Option
         checkbox2 = ttk.Checkbutton(option_frame, text="SerNumber", variable=self.generate_ser_num)
@@ -214,8 +243,8 @@ class MorseCodeXUI:
         
         ttk.Label(sound_frame, text="Volume").grid(row=0, column=volume_col, padx=5, pady=5)
         volume_slider = ttk.Scale(sound_frame, from_=0, to=100, orient=tk.VERTICAL)
-        volume_slider.bind("<ButtonRelease-1>", lambda s: helpers.slider2source(volume_slider, self.morse_source))
-        volume_slider.set(helpers.volume2value(self.morse_source.volume))
+        volume_slider.bind("<ButtonRelease-1>", lambda s: helpers.slider2source(volume_slider, self.morse_sources[0]))
+        volume_slider.set(helpers.volume2value(self.morse_sources[0].volume))
         volume_slider.grid(row=1, column=volume_col, padx=5, pady=5)
 
         ttk.Label(sound_frame, text="Soft").grid(row=0, column=softness_col, padx=5, pady=5)
@@ -252,9 +281,30 @@ class MorseCodeXUI:
         
         return sound_frame
 
+    def init_sources(self, freqs, speeds):
+    # in case of empty lists the existin gsources are preserved
+    # meaning that in non-pileup version settings stays
+        for indx, (freq, speed) in enumerate(zip(freqs, speeds)):
+            if indx == 0: # modify first and create others
+                self.morse_sources[0].set_frequency(frequency=freq)
+                self.morse_sources[0].set_speed(wpm=speed)
+            else:
+                source = MorseSoundSource(
+                    morse_mapping_filename = self.morse_file, wpm=speed, frequency=freq, sample_rate = self.sample_rate,
+                    rise_time=self.rise_time, volume=self.cw_volume)
+                self.morse_sources.append(source)
+                self.player.add_source(source)
+
     def create_main_screen(self):
         for widget in self.root.winfo_children():
             widget.destroy()
+        self.ser_num = [None] * self.signal_cnt.get()
+        self.sent_word = self.ser_num.copy()
+        if self.signal_cnt.get() > 1: # pileup mode
+            freqs = self.get_frequencies()
+            print(freqs) #XXX delete
+            speeds = [self.current_speed] * (self.signal_cnt.get())
+            self.init_sources(freqs, speeds)
         self.received_cnt = int(0)
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill="both", expand=True)
@@ -275,7 +325,7 @@ class MorseCodeXUI:
         
         self.current_session = Session(date=datetime.now().isoformat(),
             source_name=self.data_source_file.get(),
-            volume = self.morse_source.volume,
+            volume = self.morse_sources[0].volume,
             noise = self.hfnoise_source.volume,
             qrn = self.qrn_source.volume,
             qrm = self.qrm_source.volume)
@@ -308,12 +358,12 @@ class MorseCodeXUI:
         self.root.bind(self.kbd_shortcuts['repeat'][0], lambda event: self.play_word(delay=1, replay=True))
         self.load_challenges()
 
-        self.data_source = DataSource(file_path=os.path.join(self.data_source_dir, self.data_source_file.get()), num_words=int(self.training_word_count.get()), 
+        self.data_source = DataSource(file_path=os.path.join(self.data_source_dir, self.data_source_file.get()), num_words=int(self.training_word_count.get() * self.signal_cnt.get()), 
                                       pre_message=self.pre_msg_chk.get(), rst = self.generate_rst.get(), serial=self.generate_ser_num.get(),
                                       challenges=self.challenges, challenge_frac=0.25, 
                                       policies_file = os.path.join(self.config_path,  'message_policies.json'))
         self.player.start()
-        self.morse_source.play_string("vvv")
+        self.morse_sources[0].play_string("vvv")
         self.play_word(3)
         self.run_qrm_thread = True # yes, always start. when qrm_source is inactive play_string does nothing, thus thread will be mostly idle(for now)
         def qrm_sender():
@@ -328,21 +378,20 @@ class MorseCodeXUI:
 
     def update_softness(self, event):
         self.softness = self.softness_slider.get()
-        self.morse_source.set_rise(rise_time=self.rise_time)
+        self.morse_sources[0].set_rise(rise_time=self.rise_time)
 
     @property
     def rise_time(self):
         return max(0, 1.0 - float(self.softness)/100.0) * 0.3
-    
+
     def update_tone(self, event):
         self.tone = self.tone_slider.get()
-        self.morse_source.set_frequency(self.frequency)
+        self.morse_sources[0].set_frequency(self.frequency)
 
     @property
     def frequency(self):
         return int(500 + (1.0 - float(self.tone)/100) * 350) # 500-850 hz
-    
-    
+
     def load_challenges(self):
         # open challenges record
         self.challenge_file, _ = os.path.splitext(self.data_source_file.get())
@@ -383,7 +432,7 @@ class MorseCodeXUI:
     def add_challenge(self, sent_text):
         if self.use_challenge.get():
             self.challenges[sent_text] = self.challenges.get(sent_text, 0) + 1
-    
+
     def create_session_results_screen(self):
         self.save_challenges()
         if self.current_session is None:
@@ -391,7 +440,8 @@ class MorseCodeXUI:
             return
         self.stop_qrm()
         self.player.stop()
-        self.morse_source.reset()
+        for source in self.morse_sources:
+            source.reset()
         for widget in self.root.winfo_children():
             widget.destroy()
         self.session_db.add_session(self.current_session)
@@ -590,14 +640,15 @@ class MorseCodeXUI:
         self.start_enabled = False
         self.player.start()
         self.current_speed = (self.init_speed.get())
-        self.morse_source.set_speed(float(self.current_speed))
-        t_morse = self.morse_source.play_string("Vvv")
+        self.morse_sources[0].set_speed(float(self.current_speed))
+        t_morse = self.morse_sources[0].play_string("Vvv")
         t_qrn = self.qrm_source.play_string("QRN QRN")
         root.after(round(1000 * max(t_morse, t_qrn) + 0.5), self.on_sound_test_complete)
 
     def on_sound_test_complete(self):
         self.player.stop()
-        self.morse_source.reset()
+        for source in self.morse_sources:
+            source.reset()
         self.qrm_source.reset()
         self.start_enabled = True
 
@@ -605,15 +656,29 @@ class MorseCodeXUI:
         if not self.start_enabled:
             return
         self.current_speed = (self.init_speed.get())
-        self.morse_source.set_speed(float(self.current_speed))
+        self.morse_sources[0].set_speed(float(self.current_speed))
         self.save_settings()
         self.create_main_screen()
 
     def process_entry(self, event, delay=1):
         received_text = self.entry_field.get().upper().strip()
         self.entry_field.delete(0, tk.END)
-        sent_text = self.ser_num.upper() + self.sent_word.upper().strip()
-        equal, score = self.compare_function(sent_text, received_text, self.shortcuts)
+        current_score = 0
+        best_match_idx = 0
+        sent_text = self.ser_num[0].upper() + self.sent_word[0].upper().strip()
+        for i in range(self.signal_cnt.get()):
+            current_text = self.ser_num[i].upper() + self.sent_word[i].upper().strip()
+            successfully_received, score = self.compare_function(current_text, received_text, self.shortcuts)
+            if successfully_received:
+                best_match_idx = i
+                sent_text = current_text
+                break
+            if score > current_score:
+                current_score = score
+                best_match_idx = i
+                sent_text = current_text
+        if self.signal_cnt.get() > 1 and not successfully_received: 
+            score = 0 # strict score policy for pileup training
         mult = self.score_multipliers[self.current_speed - self.speed_range[0]]
         score = int(round(score*mult)) if self.speed_increase else int(round(score*mult/3.0))
         
@@ -621,19 +686,20 @@ class MorseCodeXUI:
         self.current_session.score += score
         self.received_cnt += 1
         
-        if equal:
+        if successfully_received:
             c = 'green'
             if self.speed_increase: # first receive was correct
                 self.current_speed = min(self.current_speed + 1, self.max_speed.get())
-                self.remove_challenge(self.sent_word)
+                self.remove_challenge(self.sent_word[best_match_idx])
             self.speed_increase = True
         else:
             c = 'red'
             self.current_speed = max(self.current_speed - 1, self.init_speed.get())
-            self.add_challenge(self.sent_word)
+            self.add_challenge(self.sent_word[best_match_idx])
         self.received_text.config(text=received_text, fg=c)
         self.sent_text.config(text=sent_text)
-        self.morse_source.set_speed(float(self.current_speed))
+        for s in self.morse_sources:
+            s.set_speed(float(self.current_speed))
         self.update_data_frame()
         self.play_word(delay)
     
@@ -641,22 +707,44 @@ class MorseCodeXUI:
         self.speed_label.config(text=f"Speed: {self.current_speed} WPM")
         self.score_label.config(text=f"Score: {self.current_session.score}")
         self.count_label.config(text=f"Count: {self.received_cnt}")
+    
+    def get_frequencies(self):
+        mel_range = helpers.hz_to_mel(np.array(self.frequency_range))
+        separation = (mel_range[1] - mel_range[0])/(2.0* self.signal_cnt.get())
+        mels = helpers.get_rand(self.signal_cnt.get(), mel_range, separation)
+        freqs = helpers.mel_to_hz(mels)
+        return freqs
+
+    def set_sources_freqs(self):
+        if self.signal_cnt.get() == 1:
+            return
+        freqs = self.get_frequencies()
+        for freq, source in zip(freqs, self.morse_sources):
+            source.set_frequency(frequency=freq)
 
     def play_word(self, delay, replay=False):
         if replay == False:
-            self.pre_msg, self.rst, self.ser_num, self.sent_word = self.data_source.get_next_word()
-            if self.sent_word:
-                msg = self.pre_msg+self.rst+self.ser_num+self.sent_word
-            else:
-                self.stop_qrm()
-                self.player.stop()
-                self.morse_source.reset()
-                self.create_session_results_screen()
-                return
+            self.msgs = []
+            for i in range(self.signal_cnt.get()):
+                self.pre_msg, self.rst, self.ser_num[i], self.sent_word[i] = self.data_source.get_next_word()
+                if self.sent_word[i]:
+                    msg = self.pre_msg+self.rst+self.ser_num[i]+self.sent_word[i]
+                    self.msgs.append(msg)
+                    self.set_sources_freqs()
+                else:
+                    self.stop_qrm()
+                    self.player.stop()
+                    for s in self.morse_sources:
+                        s.reset()
+                    self.create_session_results_screen()
+                    return
         else: 
             self.speed_increase = False
             msg = None
-        threading.Timer(delay, self.morse_source.play_string, args=[msg]).start()
+
+        delays = np.random.random(self.signal_cnt.get()) * self.timing_spread.get()
+        for msg, s, d in zip(self.msgs, self.morse_sources, delays):
+            threading.Timer(delay + d, s.play_string, args=[msg]).start()
 
     def stop_qrm(self):
         if self.qrm_thread:
@@ -681,7 +769,7 @@ def compare(sent_word, received_word, shortcuts):
         correct = False
     else:
         # Determine if sent and received are identical enough
-        correct = all(correctness_mask)
+        correct = all(correctness_mask) 
 
     return correct, score
 
