@@ -302,7 +302,6 @@ class MorseCodeXUI:
         self.sent_word = self.ser_num.copy()
         if self.signal_cnt.get() > 1: # pileup mode
             freqs = self.get_frequencies()
-            print(freqs) #XXX delete
             speeds = [self.current_speed] * (self.signal_cnt.get())
             self.init_sources(freqs, speeds)
         self.received_cnt = int(0)
@@ -537,7 +536,7 @@ class MorseCodeXUI:
             return
         selected_items = self.tree.selection()
         for item in selected_items:
-            session_date = self.tree.item(item, 'values')[1]
+            session_date = self.tree.item(item, 'values')[3]
             self.session_db.delete_session(session_date)
         self.populate_tree(self.sort_by)
 
@@ -546,7 +545,8 @@ class MorseCodeXUI:
             self.tree.delete(item)
         sessions = self.session_db.get_sorted_sessions(sort_by=sort_by, ascending=self.sort_inverted)
         for session in sessions:
-            self.tree.insert('', tk.END, values=(session.score, session.date, session.source_name))
+            s = datetime.strptime(session.date, "%Y-%m-%dT%H:%M:%S.%f").strftime("%y-%m-%d\t%H-%M")
+            self.tree.insert('', tk.END, values=(session.score, s, session.source_name, session.date))
 
     def on_click(self, event):
         try:
