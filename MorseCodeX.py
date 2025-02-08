@@ -166,8 +166,8 @@ class MorseCodeXUI:
         ttk.Label(source_subframe, text="# of signals").grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
         timing_spread_checker = helpers.range_checker(0.0, 0.5)
         validate_timing_spread = root.register(timing_spread_checker)
-        self.spread_sb = tk.Spinbox(source_subframe, from_=0.0, to=1.0, width=3,
-                                        increment=0.1, format="%.1f",
+        self.spread_sb = tk.Spinbox(source_subframe, from_=0.0, to=3.0, width=3,
+                                        increment=0.2, format="%.1f",
                                         wrap=False, textvariable=self.timing_spread,
                                         validate="key", validatecommand=(validate_timing_spread, '%P')
                                         )
@@ -610,14 +610,14 @@ class MorseCodeXUI:
                 max_speed = speed_for_threshold(cum_hist, 0.25)
                 a = 10 
                 b = 1./110
-                reliability = round(100*(1 + a * np.exp(-b * 500))*(1 / (1 + a * np.exp(-b *total_count)) - 1 / (1 + a)))
+                reliability = min(100, round(100*(1 + a * np.exp(-b * 500))*(1 / (1 + a * np.exp(-b *total_count)) - 1 / (1 + a))))
             else:
                 sustained_speed = None
                 max_speed = None
                 reliability = 0
             sustained_label.config(text=f"Sustained speed:\t{sustained_speed}")
             max_label.config(text=f"Maximum speed:\t{max_speed}")
-            reliability_label.config(text=f"Estimate reliability:\t{reliability}%")
+            reliability_label.config(text=f"Reliability of estimates:\t{reliability}%")
         source_selector.bind("<<ComboboxSelected>>", update_stats)
         
         #stat frame
@@ -628,7 +628,7 @@ class MorseCodeXUI:
         sustained_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
         max_label = ttk.Label(stat_frame, text=f"Maximum speed:\t{max_speed}")
         max_label.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
-        reliability_label = ttk.Label(stat_frame, text=f"Estimate reliability:\t{reliability}")
+        reliability_label = ttk.Label(stat_frame, text=f"Reliability of estimates:\t{reliability}")
         reliability_label.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
 
         close_button = Button(stat_window, text="Close", command=stat_window.destroy)
