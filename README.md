@@ -67,7 +67,11 @@ Premessage checkbox controls if the app sends the pre exchange word: tu, r, qsl 
 Ser Num checkbox will allow sending random numbers with both cut and full numbers like you will hear in real contest
 
 
-## Latest Release V1.1.0.0
+## Latest Release V1.2.0.0
+
+Adds pileup practice mode wiht multiple stations sending simultaneously. Minor bug fixes and improvements.
+
+## Release V1.1.0.0
 
 Supports customizable message formation policies, expanding support for various contest exchanges. This version adds support for ARRL Sweepstakes exchanges. Provides extended statistics accumulated across sessions, including sustained speed with errors below a 3% threshold and maximum speed with errors above a 25% threshold.
 
