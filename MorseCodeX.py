@@ -101,7 +101,8 @@ class MorseCodeXUI:
             self.sort_inverted = settings.get('sort_inverted', False)
             self.signal_cnt = tk.IntVar(value = settings.get('signal_cnt', 1))
             self.timing_spread = tk.DoubleVar(value=settings.get('timing_spread', 0.2))
-
+            self.randomize_speed = tk.BooleanVar(value=settings.get('randomize_speed', False))
+            self.randomize_tone = tk.BooleanVar(value=settings.get('randomize_tone', False))
 
     def save_settings(self):
         with shelve.open(os.path.join(self.config_path,'settings')) as settings:
@@ -126,6 +127,8 @@ class MorseCodeXUI:
             settings['sort_inverted'] = self.sort_inverted
             settings['signal_cnt'] = self.signal_cnt.get()
             settings['timing_spread'] = self.timing_spread.get()
+            settings['randomize_speed'] = self.randomize_speed.get()
+            settings['randomize_tone'] = self.randomize_tone.get()
             
     def create_start_screen(self):
         for widget in self.root.winfo_children():
@@ -196,29 +199,38 @@ class MorseCodeXUI:
                                         wrap=False, textvariable=self.init_speed,
                                         validate="key", validatecommand=(validate_speed_command, '%P')
                                         )
-        self.init_speed_entry.grid(row=0, column=1, padx=5, pady=5)
+        row = 0
+        self.init_speed_entry.grid(row=row, column=1, padx=5, pady=5)
         
-        ttk.Label(param_frame, text="Max Speed (WPM):").grid(row=1, column=0, padx=5, pady=5)
+        row += 1
+        ttk.Label(param_frame, text="Max Speed (WPM):").grid(row=row, column=0, padx=5, pady=5)
         self.max_speed_entry = tk.Spinbox(param_frame, from_=self.speed_range[0], to=self.speed_range[1],
                                         wrap=False, textvariable=self.max_speed,
                                         validate="key", validatecommand=(validate_speed_command, '%P')
                                         )
-        self.max_speed_entry.grid(row=1, column=1, padx=5, pady=5)
-
+        self.max_speed_entry.grid(row=row, column=1, padx=5, pady=5)
+        row += 1
         counts = [5, 8, 13, 21, 34, 55, 89, 144, 233, 377]
         count_checker = helpers.range_checker(counts[0], counts[-1])
         validate_count_command = root.register(count_checker)
-        ttk.Label(param_frame, text="Training messages count:").grid(row=2, column=0, padx=5, pady=5)
+        ttk.Label(param_frame, text="Training messages count:").grid(row=row, column=0, padx=5, pady=5)
         temp = self.training_word_count.get() # this spinbox bug - the default value is not set but overwritten
         self.training_word_count_entry = tk.Spinbox(param_frame, values=counts,
                                                     wrap=False, textvariable=self.training_word_count,
                                                     validate="key", validatecommand=(validate_count_command, '%P')
                                                     )
         self.training_word_count.set(temp)
-        self.training_word_count_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.training_word_count_entry.grid(row=row, column=1, padx=5, pady=5)
 
+        row += 1
+        checkbox = ttk.Checkbutton(param_frame, text="Randomize Speed", variable=self.randomize_speed)
+        checkbox.grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
+        checkbox = ttk.Checkbutton(param_frame, text="Randomize Tone", variable=self.randomize_tone)
+        checkbox.grid(row=row, column=1, sticky=tk.W, padx=5, pady=5)
+        
+        row += 1
         self.start_button = Button(param_frame, text="Start", command=self.start_training)
-        self.start_button.grid(row=4, column=0, padx=5, pady=5)
+        self.start_button.grid(row=row, column=0, padx=5, pady=5)
         self.start_button.bind("<Return>", lambda event: self.start_training())
         self.start_button.focus_set()
 
