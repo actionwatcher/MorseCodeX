@@ -729,6 +729,9 @@ class MorseCodeXUI:
 
     def set_sources_freqs(self):
         if self.signal_cnt.get() == 1:
+            if self.randomize_tone.get() == True:
+                freq = np.random.randint(self.frequency-300, self.frequency+300)
+                self.morse_sources[0].set_frequency(frequency=freq)
             return
         freqs = self.get_frequencies()
         for freq, source in zip(freqs, self.morse_sources):
