@@ -711,7 +711,12 @@ class MorseCodeXUI:
         self.received_text.config(text=received_text, fg=c)
         self.sent_text.config(text=sent_text)
         for s in self.morse_sources:
-            s.set_speed(float(self.current_speed))
+            speed = self.current_speed
+            if self.randomize_speed.get():
+                min_speed = round(speed * 0.7)
+                max_speed = max(speed + 1, round(speed * 1.1)) + 1
+                speed = np.random.randint(min_speed, max_speed)
+            s.set_speed(float(speed))
         self.update_data_frame()
         self.play_word(delay)
     
