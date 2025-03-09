@@ -680,6 +680,7 @@ class MorseCodeXUI:
         for i in range(self.signal_cnt.get()):
             current_text = self.ser_num[i].upper() + self.sent_word[i].upper().strip()
             successfully_received, score = self.compare_function(current_text, received_text, self.shortcuts)
+            recv_speed = round(self.morse_sources[i].get_speed())
             if successfully_received:
                 best_match_idx = i
                 sent_text = current_text
@@ -690,10 +691,10 @@ class MorseCodeXUI:
                 sent_text = current_text
         if self.signal_cnt.get() > 1 and not successfully_received: 
             score = 0 # strict score policy for pileup training
-        mult = self.score_multipliers[self.current_speed - self.speed_range[0]]
+        mult = self.score_multipliers[recv_speed - self.speed_range[0]]
         score = int(round(score*mult)) if self.speed_increase else int(round(score*mult/3.0))
         
-        self.current_session.add_item(received=received_text, sent=sent_text, speed=self.current_speed, duration=1.3)
+        self.current_session.add_item(received=received_text, sent=sent_text, speed=recv_speed, duration=1.3)
         self.current_session.score += score
         self.received_cnt += 1
         
