@@ -68,7 +68,7 @@ Ser Num checkbox will allow sending random numbers with both cut and full number
 
 ## Latest Release V1.3.1.0
 
-Adds optional speed and tone randomization. Fix a bug introduced by V1.2 - not showing session data. In pileup mode tone randomization is enabled by default and selecting/deselecting tone randomization hase no effect. Speed randomization can be used in any traning mode. The speed is selected between 70% - 110 % of current speed. The score take into account actual speed.
+Adds optional speed and tone randomization. Fix a bug introduced by V1.2 - not showing session data. In pileup mode tone randomization is enabled by default and selecting/deselecting tone randomization has no effect. Speed randomization can be used in any traning mode. The speed is selected between 70% - 110 % of current speed. The score take into account actual speed.
 
 
 ## Latest Release V1.2.0.0
