@@ -563,7 +563,7 @@ class MorseCodeXUI:
     def on_click(self, event):
         try:
             item = self.tree.focus()
-            session_date = self.tree.item(item, 'values')[1]
+            session_date = self.tree.item(item, 'values')[3]
             self.selected_session = self.session_db.get_session(session_date)
             self.display_session()
         except IndexError:
@@ -606,7 +606,6 @@ class MorseCodeXUI:
         source_selector.grid(row=0, column=1, padx=5, pady=5)
         def update_stats(event):
             selected_source = source_selector.get()
-            print("You selected:", selected_source)
 
             def speed_for_threshold(hist, thres):
                 speed = hist[0][0]
