@@ -33,14 +33,14 @@ VSVersionInfo(
         [StringStruct('Comments', 'MorseCodeX'),
         StringStruct('CompanyName', 'MorseCodeX'),
         StringStruct('FileDescription', 'MorseCodeX'),
-        StringStruct('FileVersion', '1.2.0.0'),
+        StringStruct('FileVersion', '1.3.1.0'),
         StringStruct('InternalName', 'MorseCodeX.exe'),
         StringStruct('LegalCopyright', 'Copyright ©  2024'),
         StringStruct('LegalTrademarks', ''),
         StringStruct('OriginalFilename', 'MorseCodeX.exe'),
         StringStruct('ProductName', ''),
-        StringStruct('ProductVersion', '1.2.0.0'),
-        StringStruct('Assembly Version', '1.2.0.0')])
+        StringStruct('ProductVersion', '1.3.1.0'),
+        StringStruct('Assembly Version', '1.3.1.0')])
       ])
   ]
 )
