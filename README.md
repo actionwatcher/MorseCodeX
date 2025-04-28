@@ -66,6 +66,16 @@ Premessage checkbox controls if the app sends the pre exchange word: tu, r, qsl 
 
 Ser Num checkbox will allow sending random numbers with both cut and full numbers like you will hear in real contest
 
+## Custom Data Files
+
+MorseCodeX empowers you to tailor your practice sessions with custom data source files, allowing you to focus on specific characters, words, or patterns. By default, MorseCodeX looks for data files in the following locations, depending on your operating system:
+
+-   **macOS:** `~/Library/Application Support/MorseCodeX/data`
+-   **Windows:** `~\AppData\Local\MorseCodeX\data`
+-   **Linux:** `~/.MorseCodeX/data`
+
+Note that the symbol `~` represents your user's home directory. In many cases, these directories are hidden, requiring you to manually direct your file management application to the specified path. Alternatively, you can utilize command-line copy or move utilities. While not mandatory, placing your custom data files in the default location is recommended. This setup allows you to seamlessly use both the provided message source files and your own custom sources within MorseCodeX.
+
 ## Latest Release V1.3.1.0
 
 Adds optional speed and tone randomization. Fix a bug introduced by V1.2 - not showing session data. In pileup mode tone randomization is enabled by default and selecting/deselecting tone randomization has no effect. Speed randomization can be used in any traning mode. The speed is selected between 70% - 110 % of current speed. The score take into account actual speed.
