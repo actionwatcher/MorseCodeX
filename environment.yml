@@ -1,0 +1,13 @@
+name: cw
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13
+  - python-sounddevice
+  - pyinstaller
+  - pillow
+  - pip
+  - pip:
+      # only installed on macOS
+      - tkmacosx; sys_platform == "darwin"
+
